@@ -397,8 +397,21 @@ export default function Chat() {
 
       switch (intent.intent) {
         case 'transaction': {
-          const { type, amount, currency, category, description, date, receiptUrl } = intent.data;
-          addTransaction({ type, amount, currency, category, description, date, receiptUrl });
+          const { type, amount, currency, category, description, date, receiptUrl, sourceName, sourceIsCard } = intent.data as any;
+          const linkedIds = resolveLinkedSource(sourceName, sourceIsCard);
+          addTransaction({ type, amount, currency, category, description, date, receiptUrl, ...linkedIds });
+
+          // Auto-update linked account/card balance
+          if (linkedIds.linkedAccountId) {
+            const delta = type === 'expense' ? -amount : amount;
+            const account = accounts.find((a) => a.id === linkedIds.linkedAccountId);
+            if (account) updateAccount(account.id, { balance: account.balance + delta });
+          }
+          if (linkedIds.linkedCardId) {
+            const delta = type === 'expense' ? amount : -amount;
+            const card = cards.find((c) => c.id === linkedIds.linkedCardId);
+            if (card) updateCard(card.id, { outstanding: Math.max(0, card.outstanding + delta) });
+          }
           break;
         }
         case 'bank_account':
