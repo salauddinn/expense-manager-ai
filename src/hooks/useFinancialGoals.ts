@@ -1,6 +1,8 @@
-import { useLocalStorage } from './useLocalStorage';
-import { FinancialGoal, GoalCategory, GoalContribution } from '@/types/finance';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
+import { FinancialGoal, GoalCategory, GoalContribution } from '@/types/finance';
+import { supabase } from '@/lib/supabase';
+import { toCamelCase } from '@/lib/dbMapper';
 import { logger } from '@/lib/logger';
 import { analytics } from '@/lib/analytics';
 
@@ -21,103 +23,163 @@ export function getGoalCategoryInfo(cat: GoalCategory) {
 
 const MILESTONES = [25, 50, 75, 100];
 
+async function fetchGoalsWithContributions(): Promise<FinancialGoal[]> {
+  const [goalsRes, contribsRes, linkedRes] = await Promise.all([
+    supabase.from('financial_goals').select('*').order('created_at', { ascending: false }),
+    supabase.from('goal_contributions').select('*').order('created_at', { ascending: true }),
+    supabase.from('goal_linked_transactions').select('*'),
+  ]);
+
+  if (goalsRes.error) throw goalsRes.error;
+  if (contribsRes.error) throw contribsRes.error;
+  if (linkedRes.error) throw linkedRes.error;
+
+  const contribs = (contribsRes.data ?? []);
+  const linked = (linkedRes.data ?? []);
+
+  return (goalsRes.data ?? []).map((row) => {
+    const goal = toCamelCase<FinancialGoal>(row as Record<string, unknown>);
+    goal.contributions = contribs
+      .filter((c) => c.goal_id === goal.id)
+      .map((c) => toCamelCase<GoalContribution>(c as Record<string, unknown>));
+    goal.linkedTransactionIds = linked
+      .filter((l) => l.goal_id === goal.id)
+      .map((l) => l.transaction_id as string);
+    return goal;
+  });
+}
+
 export function useFinancialGoals() {
-  const [goals, setGoals] = useLocalStorage<FinancialGoal[]>('finance_goals', []);
+  const queryClient = useQueryClient();
+  const queryKey = ['financial_goals'];
 
-  const addGoal = useCallback((goal: Omit<FinancialGoal, 'id' | 'createdAt' | 'currentAmount' | 'celebratedMilestones' | 'linkedTransactionIds'>) => {
-    const n: FinancialGoal = {
-      ...goal,
-      id: crypto.randomUUID(),
-      currentAmount: 0,
-      celebratedMilestones: [],
-      linkedTransactionIds: [],
-      createdAt: new Date().toISOString(),
-    };
-    logger.info('[Goals] Created goal', n.name);
-    analytics.track('goal_created', { category: n.category, target: n.targetAmount });
-    setGoals((prev) => [...prev, n]);
-    return n;
-  }, [setGoals]);
+  const { data: goals = [] } = useQuery({
+    queryKey,
+    queryFn: fetchGoalsWithContributions,
+  });
 
-  const addContribution = useCallback((id: string, amount: number): { newMilestones: number[] } => {
-    let newMilestones: number[] = [];
+  const addGoal = useCallback(
+    async (goal: Omit<FinancialGoal, 'id' | 'createdAt' | 'currentAmount' | 'celebratedMilestones' | 'linkedTransactionIds'>) => {
+      logger.info('[Goals] Creating', goal.name);
+      analytics.track('goal_created', { category: goal.category, target: goal.targetAmount });
 
-    setGoals((prev) =>
-      prev.map((g) => {
-        if (g.id !== id) return g;
-        const newAmount = Math.min(g.currentAmount + amount, g.targetAmount);
-        const pct = (newAmount / g.targetAmount) * 100;
-        const celebrated = g.celebratedMilestones ?? [];
-        const freshMilestones = MILESTONES.filter((m) => pct >= m && !celebrated.includes(m));
-        newMilestones = freshMilestones;
+      const { data, error } = await supabase
+        .from('financial_goals')
+        .insert({
+          name: goal.name,
+          target_amount: goal.targetAmount,
+          current_amount: 0,
+          currency: goal.currency,
+          deadline: goal.deadline ?? null,
+          icon: goal.icon,
+          category: goal.category,
+          color: goal.color,
+          celebrated_milestones: [],
+        })
+        .select()
+        .single();
 
-        const entry: GoalContribution = {
-          id: crypto.randomUUID(),
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey });
+      return toCamelCase<FinancialGoal>(data as Record<string, unknown>);
+    },
+    [queryClient],
+  );
+
+  const addContribution = useCallback(
+    async (id: string, amount: number): Promise<{ newMilestones: number[] }> => {
+      const goal = goals.find((g) => g.id === id);
+      if (!goal) return { newMilestones: [] };
+
+      const newAmount = Math.min(goal.currentAmount + amount, goal.targetAmount);
+      const pct = (newAmount / goal.targetAmount) * 100;
+      const celebrated = goal.celebratedMilestones ?? [];
+      const freshMilestones = MILESTONES.filter((m) => pct >= m && !celebrated.includes(m));
+
+      logger.info('[Goals] Contribution', { id, amount, pct: Math.round(pct) });
+      if (freshMilestones.length > 0) {
+        analytics.track('goal_milestone', { id, milestones: freshMilestones.join(',') });
+      }
+
+      const newCelebrated = [...celebrated, ...freshMilestones];
+
+      const [updateRes, contribRes] = await Promise.all([
+        supabase
+          .from('financial_goals')
+          .update({ current_amount: newAmount, celebrated_milestones: newCelebrated })
+          .eq('id', id),
+        supabase.from('goal_contributions').insert({
+          goal_id: id,
           amount,
           date: new Date().toISOString(),
           source: 'manual',
-        };
+        }),
+      ]);
 
-        logger.info('[Goals] Contribution added', { id, amount, newPct: Math.round(pct) });
-        if (freshMilestones.length > 0) {
-          analytics.track('goal_milestone', { id, milestones: freshMilestones.join(',') });
-        }
+      if (updateRes.error) throw updateRes.error;
+      if (contribRes.error) throw contribRes.error;
 
-        return {
-          ...g,
-          currentAmount: newAmount,
-          contributions: [...(g.contributions ?? []), entry],
-          celebratedMilestones: [...celebrated, ...freshMilestones],
-        };
-      })
-    );
+      queryClient.invalidateQueries({ queryKey });
+      return { newMilestones: freshMilestones };
+    },
+    [goals, queryClient],
+  );
 
-    return { newMilestones };
-  }, [setGoals]);
+  const linkTransaction = useCallback(
+    async (goalId: string, transactionId: string, amount: number, label?: string): Promise<{ newMilestones: number[] }> => {
+      const goal = goals.find((g) => g.id === goalId);
+      if (!goal) return { newMilestones: [] };
 
-  const linkTransaction = useCallback((goalId: string, transactionId: string, amount: number, label?: string): { newMilestones: number[] } => {
-    let newMilestones: number[] = [];
+      const alreadyLinked = (goal.linkedTransactionIds ?? []).includes(transactionId);
+      if (alreadyLinked) return { newMilestones: [] };
 
-    setGoals((prev) =>
-      prev.map((g) => {
-        if (g.id !== goalId) return g;
-        const linked = g.linkedTransactionIds ?? [];
-        if (linked.includes(transactionId)) return g;
+      const newAmount = Math.min(goal.currentAmount + amount, goal.targetAmount);
+      const pct = (newAmount / goal.targetAmount) * 100;
+      const celebrated = goal.celebratedMilestones ?? [];
+      const freshMilestones = MILESTONES.filter((m) => pct >= m && !celebrated.includes(m));
+      const newCelebrated = [...celebrated, ...freshMilestones];
 
-        const newAmount = Math.min(g.currentAmount + amount, g.targetAmount);
-        const pct = (newAmount / g.targetAmount) * 100;
-        const celebrated = g.celebratedMilestones ?? [];
-        const freshMilestones = MILESTONES.filter((m) => pct >= m && !celebrated.includes(m));
-        newMilestones = freshMilestones;
+      logger.info('[Goals] Link transaction', { goalId, transactionId, amount });
 
-        const entry: GoalContribution = {
-          id: crypto.randomUUID(),
+      const [updateRes, contribRes, linkRes] = await Promise.all([
+        supabase
+          .from('financial_goals')
+          .update({ current_amount: newAmount, celebrated_milestones: newCelebrated })
+          .eq('id', goalId),
+        supabase.from('goal_contributions').insert({
+          goal_id: goalId,
           amount,
           date: new Date().toISOString(),
           source: 'transaction',
-          label,
-        };
+          label: label ?? null,
+          transaction_id: transactionId,
+        }),
+        supabase.from('goal_linked_transactions').insert({
+          goal_id: goalId,
+          transaction_id: transactionId,
+        }),
+      ]);
 
-        logger.info('[Goals] Transaction linked', { goalId, transactionId, amount });
+      if (updateRes.error) throw updateRes.error;
+      if (contribRes.error) throw contribRes.error;
+      if (linkRes.error) throw linkRes.error;
 
-        return {
-          ...g,
-          currentAmount: newAmount,
-          linkedTransactionIds: [...linked, transactionId],
-          contributions: [...(g.contributions ?? []), entry],
-          celebratedMilestones: [...celebrated, ...freshMilestones],
-        };
-      })
-    );
+      queryClient.invalidateQueries({ queryKey });
+      return { newMilestones: freshMilestones };
+    },
+    [goals, queryClient],
+  );
 
-    return { newMilestones };
-  }, [setGoals]);
-
-  const deleteGoal = useCallback((id: string) => {
-    logger.info('[Goals] Deleted goal', id);
-    analytics.track('goal_deleted');
-    setGoals((prev) => prev.filter((g) => g.id !== id));
-  }, [setGoals]);
+  const deleteGoal = useCallback(
+    async (id: string) => {
+      logger.info('[Goals] Deleted', id);
+      analytics.track('goal_deleted');
+      const { error } = await supabase.from('financial_goals').delete().eq('id', id);
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey });
+    },
+    [queryClient],
+  );
 
   return { goals, addGoal, addContribution, linkTransaction, deleteGoal };
 }

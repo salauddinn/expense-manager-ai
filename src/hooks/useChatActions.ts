@@ -1,7 +1,9 @@
 /**
  * Chat business logic — extracted from Chat.tsx for maintainability.
+ * Messages persisted to Supabase chat_messages table.
  */
 import { useState, useRef, useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTransactions } from '@/hooks/useTransactions';
 import { useBankAccounts } from '@/hooks/useBankAccounts';
 import { useCreditCards } from '@/hooks/useCreditCards';
@@ -9,21 +11,48 @@ import { useAssets } from '@/hooks/useAssets';
 import { useLoans } from '@/hooks/useLoans';
 import { useBudgetGoals } from '@/hooks/useBudgetGoals';
 import { useLLMSettings } from '@/hooks/useLLMSettings';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { parseMessageFull, ParsedIntent } from '@/lib/chatParser';
 import { callLLM, mapLLMResultToIntent } from '@/lib/llmService';
 import { formatCurrency } from '@/lib/currencies';
 import { getCategoryInfo } from '@/lib/categories';
 import { answerQuery } from '@/lib/queryEngine';
 import { ChatMessage, createMessage, HELP_TEXT } from '@/components/ChatComponents';
+import { supabase } from '@/lib/supabase';
 import { logger } from '@/lib/logger';
 import { analytics } from '@/lib/analytics';
 import { toast } from 'sonner';
 
+const CHAT_QUERY_KEY = ['chat_messages'];
+
+function dbRowToMessage(row: Record<string, unknown>): ChatMessage {
+  return {
+    id: row.id as string,
+    role: row.role as 'user' | 'assistant',
+    content: row.content as string,
+    imageUrl: (row.image_url as string | null) ?? undefined,
+    parsedIntent: (row.parsed_intent as ParsedIntent | null) ?? undefined,
+    confirmed: row.confirmed as boolean | undefined,
+    isLoading: (row.is_loading as boolean | null) ?? false,
+    timestamp: new Date(row.created_at as string).getTime(),
+  };
+}
+
 export function useChatActions() {
-  const [messages, setMessages] = useLocalStorage<ChatMessage[]>('finance_chat_messages', []);
   const [input, setInput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const queryClient = useQueryClient();
+
+  const { data: messages = [] } = useQuery({
+    queryKey: CHAT_QUERY_KEY,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('chat_messages')
+        .select('*')
+        .order('created_at', { ascending: true });
+      if (error) throw error;
+      return (data ?? []).map((row) => dbRowToMessage(row as Record<string, unknown>));
+    },
+  });
 
   const { transactions, addTransaction } = useTransactions();
   const { accounts, addAccount, updateAccount } = useBankAccounts();
@@ -37,6 +66,37 @@ export function useChatActions() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const financialData = { transactions, accounts, cards, loans, assets };
+
+  const persistMessage = useCallback(async (msg: ChatMessage) => {
+    const { error } = await supabase.from('chat_messages').insert({
+      id: msg.id,
+      role: msg.role,
+      content: msg.content,
+      image_url: msg.imageUrl ?? null,
+      parsed_intent: msg.parsedIntent ?? null,
+      confirmed: msg.confirmed ?? null,
+      is_loading: msg.isLoading ?? false,
+    });
+    if (error) logger.error('[Chat] Failed to persist message', error.message);
+  }, []);
+
+  const updatePersistedMessage = useCallback(async (id: string, updates: Partial<ChatMessage>) => {
+    const dbUpdates: Record<string, unknown> = {};
+    if ('content' in updates) dbUpdates.content = updates.content;
+    if ('parsedIntent' in updates) dbUpdates.parsed_intent = updates.parsedIntent ?? null;
+    if ('confirmed' in updates) dbUpdates.confirmed = updates.confirmed ?? null;
+    if ('isLoading' in updates) dbUpdates.is_loading = updates.isLoading ?? false;
+
+    const { error } = await supabase.from('chat_messages').update(dbUpdates).eq('id', id);
+    if (error) logger.error('[Chat] Failed to update message', error.message);
+    queryClient.invalidateQueries({ queryKey: CHAT_QUERY_KEY });
+  }, [queryClient]);
+
+  const setMessages = useCallback((updater: ((prev: ChatMessage[]) => ChatMessage[]) | ChatMessage[]) => {
+    queryClient.setQueryData<ChatMessage[]>(CHAT_QUERY_KEY, (prev = []) =>
+      typeof updater === 'function' ? updater(prev) : updater
+    );
+  }, [queryClient]);
 
   const resolveLinkedSource = useCallback(
     (sourceName?: string, sourceIsCard?: boolean): { linkedAccountId?: string; linkedCardId?: string } => {
@@ -113,7 +173,7 @@ export function useChatActions() {
   );
 
   const processWithLLM = useCallback(
-    async (text: string, loadingMsgId: string, imageUrl?: string) => {
+    async (text: string, loadingMsg: ChatMessage, imageUrl?: string) => {
       try {
         const result = await callLLM(llmSettings.provider, llmSettings.apiKey, llmSettings.model, text);
         const mapped = mapLLMResultToIntent(result);
@@ -121,15 +181,18 @@ export function useChatActions() {
         if (mapped.intent === 'query') {
           const content = result.message || answerQuery(mapped.data as any, financialData);
           setMessages((prev) =>
-            prev.map((m) => m.id === loadingMsgId ? { ...m, content, isLoading: false, confirmed: false } : m),
+            prev.map((m) => m.id === loadingMsg.id ? { ...m, content, isLoading: false, confirmed: false } : m),
           );
+          await updatePersistedMessage(loadingMsg.id, { content, isLoading: false, confirmed: false });
           return;
         }
 
         if (mapped.intent === 'unknown') {
+          const content = result.message || HELP_TEXT;
           setMessages((prev) =>
-            prev.map((m) => m.id === loadingMsgId ? { ...m, content: result.message || HELP_TEXT, isLoading: false, confirmed: false } : m),
+            prev.map((m) => m.id === loadingMsg.id ? { ...m, content, isLoading: false, confirmed: false } : m),
           );
+          await updatePersistedMessage(loadingMsg.id, { content, isLoading: false, confirmed: false });
           return;
         }
 
@@ -139,27 +202,35 @@ export function useChatActions() {
         }
 
         setMessages((prev) =>
-          prev.map((m) => m.id === loadingMsgId ? { ...m, content: result.message, isLoading: false, parsedIntent, confirmed: undefined } : m),
+          prev.map((m) => m.id === loadingMsg.id ? { ...m, content: result.message, isLoading: false, parsedIntent, confirmed: undefined } : m),
         );
+        await updatePersistedMessage(loadingMsg.id, { content: result.message, isLoading: false, parsedIntent });
       } catch (error) {
         logger.error('LLM call failed', error instanceof Error ? error.message : error);
         const parsed = parseMessageFull(text);
         const { content, parsedIntent } = buildResponse(parsed, imageUrl);
         const isActionable = parsed.intent !== 'query' && parsed.intent !== 'unknown';
+        const finalContent = `⚠️ AI unavailable, using smart parser:\n\n${content}`;
 
         setMessages((prev) =>
           prev.map((m) =>
-            m.id === loadingMsgId
-              ? { ...m, content: `⚠️ AI unavailable, using smart parser:\n\n${content}`, isLoading: false, parsedIntent: isActionable ? parsedIntent : undefined, confirmed: isActionable ? undefined : false }
+            m.id === loadingMsg.id
+              ? { ...m, content: finalContent, isLoading: false, parsedIntent: isActionable ? parsedIntent : undefined, confirmed: isActionable ? undefined : false }
               : m,
           ),
         );
+        await updatePersistedMessage(loadingMsg.id, {
+          content: finalContent,
+          isLoading: false,
+          parsedIntent: isActionable ? parsedIntent : undefined,
+          confirmed: isActionable ? undefined : false,
+        });
         toast.error('AI call failed, used rule-based parser instead');
       } finally {
         setIsProcessing(false);
       }
     },
-    [llmSettings, financialData, buildResponse, setMessages],
+    [llmSettings, financialData, buildResponse, setMessages, updatePersistedMessage],
   );
 
   const handleSend = useCallback(
@@ -174,6 +245,8 @@ export function useChatActions() {
       if (imageUrl && !text) {
         const assistantMsg = createMessage('assistant', '📷 Receipt received! Please describe the transaction (e.g., "spent ₹500 on groceries") so I can save it.');
         setMessages((prev) => [...prev, userMsg, assistantMsg]);
+        persistMessage(userMsg);
+        persistMessage(assistantMsg);
         setInput('');
         return;
       }
@@ -181,9 +254,11 @@ export function useChatActions() {
       if (isLLMConfigured) {
         const loadingMsg = createMessage('assistant', 'Thinking...', { isLoading: true });
         setMessages((prev) => [...prev, userMsg, loadingMsg]);
+        persistMessage(userMsg);
+        persistMessage(loadingMsg);
         setInput('');
         setIsProcessing(true);
-        processWithLLM(text, loadingMsg.id, imageUrl);
+        processWithLLM(text, loadingMsg, imageUrl);
         return;
       }
 
@@ -196,9 +271,11 @@ export function useChatActions() {
       });
 
       setMessages((prev) => [...prev, userMsg, assistantMsg]);
+      persistMessage(userMsg);
+      persistMessage(assistantMsg);
       setInput('');
     },
-    [input, isLLMConfigured, buildResponse, processWithLLM, setMessages],
+    [input, isLLMConfigured, buildResponse, processWithLLM, setMessages, persistMessage],
   );
 
   const handleConfirm = useCallback(
@@ -248,9 +325,10 @@ export function useChatActions() {
       setMessages((prev) =>
         prev.map((m) => m.id === msg.id ? { ...m, confirmed: true, content: successMsg } : m),
       );
+      updatePersistedMessage(msg.id, { confirmed: true, content: successMsg });
       toast.success(successMsg.replace('✅ ', ''));
     },
-    [addTransaction, addAccount, addCard, addAsset, addLoan, addGoal, accounts, cards, updateAccount, updateCard, resolveLinkedSource, setMessages],
+    [addTransaction, addAccount, addCard, addAsset, addLoan, addGoal, accounts, cards, updateAccount, updateCard, resolveLinkedSource, setMessages, updatePersistedMessage],
   );
 
   const handleReject = useCallback(
@@ -260,8 +338,9 @@ export function useChatActions() {
       setMessages((prev) =>
         prev.map((m) => m.id === msgId ? { ...m, confirmed: false, content: '❌ Discarded.', parsedIntent: undefined } : m),
       );
+      updatePersistedMessage(msgId, { confirmed: false, content: '❌ Discarded.', parsedIntent: undefined });
     },
-    [setMessages],
+    [setMessages, updatePersistedMessage],
   );
 
   const handleImageUpload = useCallback(
@@ -290,9 +369,15 @@ export function useChatActions() {
     [handleSend],
   );
 
-  const clearMessages = useCallback(() => {
-    setMessages([]);
-    toast.success('Chat cleared');
+  const clearMessages = useCallback(async () => {
+    const { error } = await supabase
+      .from('chat_messages')
+      .delete()
+      .neq('id', '00000000-0000-0000-0000-000000000000'); // delete all rows
+    if (!error) {
+      setMessages([]);
+      toast.success('Chat cleared');
+    }
   }, [setMessages]);
 
   return {

@@ -1,9 +1,13 @@
 /**
- * LLM Settings hook — stores API key and provider in localStorage.
+ * LLM Settings hook.
+ * - provider + model stored in Supabase (llm_settings table)
+ * - apiKey stored only in localStorage (never sent to DB)
  */
 
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocalStorage } from './useLocalStorage';
+import { supabase } from '@/lib/supabase';
 import { logger } from '@/lib/logger';
 import { analytics } from '@/lib/analytics';
 
@@ -35,26 +39,65 @@ export const PROVIDER_MODELS: Record<LLMProvider, { value: string; label: string
 };
 
 export function useLLMSettings() {
-  const [settings, setSettings] = useLocalStorage<LLMSettings>(
-    'finance_llm_settings',
-    DEFAULT_SETTINGS,
+  const queryClient = useQueryClient();
+  const queryKey = ['llm_settings'];
+
+  // API key stays local only — never persisted to DB
+  const [apiKey, setApiKey] = useLocalStorage<string>('finance_llm_api_key', '');
+
+  const { data: dbSettings } = useQuery({
+    queryKey,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('llm_settings')
+        .select('provider, model')
+        .maybeSingle();
+      return data as { provider: LLMProvider; model: string } | null;
+    },
+  });
+
+  const settings: LLMSettings = {
+    provider: dbSettings?.provider ?? DEFAULT_SETTINGS.provider,
+    model: dbSettings?.model ?? DEFAULT_SETTINGS.model,
+    apiKey,
+  };
+
+  const isConfigured = !!apiKey.trim();
+
+  const updateSettings = useCallback(
+    async (updates: Partial<LLMSettings>) => {
+      logger.info('[LLMSettings] Updated', Object.keys(updates));
+
+      if (updates.apiKey !== undefined) {
+        setApiKey(updates.apiKey);
+        analytics.track('llm_apikey_updated', { hasKey: !!updates.apiKey.trim() });
+      }
+
+      const dbUpdates: Record<string, unknown> = {};
+      if (updates.provider) {
+        dbUpdates.provider = updates.provider;
+        analytics.track('llm_provider_changed', { provider: updates.provider });
+      }
+      if (updates.model) {
+        dbUpdates.model = updates.model;
+        analytics.track('llm_model_changed', { model: updates.model });
+      }
+
+      if (Object.keys(dbUpdates).length > 0) {
+        await supabase
+          .from('llm_settings')
+          .upsert(dbUpdates, { onConflict: 'user_id' });
+        queryClient.invalidateQueries({ queryKey });
+      }
+    },
+    [setApiKey, queryClient],
   );
-
-  const isConfigured = !!settings.apiKey.trim();
-
-  const updateSettings = useCallback((updates: Partial<LLMSettings>) => {
-    logger.info('[LLMSettings] Updated', Object.keys(updates));
-    if (updates.provider) analytics.track('llm_provider_changed', { provider: updates.provider });
-    if (updates.model) analytics.track('llm_model_changed', { model: updates.model });
-    if (updates.apiKey !== undefined) analytics.track('llm_apikey_updated', { hasKey: !!updates.apiKey.trim() });
-    setSettings((prev) => ({ ...prev, ...updates }));
-  }, [setSettings]);
 
   const clearApiKey = useCallback(() => {
     logger.info('[LLMSettings] API key cleared');
     analytics.track('llm_apikey_cleared');
-    setSettings((prev) => ({ ...prev, apiKey: '' }));
-  }, [setSettings]);
+    setApiKey('');
+  }, [setApiKey]);
 
   return { settings, isConfigured, updateSettings, clearApiKey };
 }

@@ -1,10 +1,12 @@
 /**
- * LLM Service — Calls OpenAI or Google Gemini APIs directly from the browser.
+ * LLM Service — Calls OpenAI or Google Gemini via Supabase Edge Function proxy.
+ * Falls back to direct browser API calls if Edge Function is unavailable.
  */
 
 import { LLMProvider } from '@/hooks/useLLMSettings';
 import { CategoryType, TransactionType } from '@/types/finance';
 import { logger } from '@/lib/logger';
+import { supabase } from '@/lib/supabase';
 
 // ── Types ──
 
@@ -283,6 +285,37 @@ async function callGemini(
     data: args,
     message: args.message ?? 'Parsed successfully.',
   };
+}
+
+// ── Edge Function Proxy ──
+
+/**
+ * Call LLM via Supabase Edge Function proxy (keeps API keys server-side).
+ * Preferred over direct browser calls.
+ */
+export async function callLLMProxy(
+  provider: LLMProvider,
+  model: string,
+  userMessage: string,
+): Promise<LLMParsedResult> {
+  logger.info('[LLM] Calling via Edge Function proxy', { provider, model });
+
+  const { data, error } = await supabase.functions.invoke('llm-proxy', {
+    body: { message: userMessage, provider, model },
+  });
+
+  if (error) {
+    logger.error('[LLM] Edge Function error', error.message);
+    throw new Error(error.message);
+  }
+
+  if (data.error) {
+    logger.error('[LLM] Proxy returned error', data.error);
+    throw new Error(data.error);
+  }
+
+  logger.info('[LLM] Proxy result', { intent: data.intent });
+  return data as LLMParsedResult;
 }
 
 // ── Public API ──

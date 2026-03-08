@@ -1,21 +1,20 @@
-import { useLocalCrud } from './useLocalCrud';
+import { useSupabaseCrud } from './useSupabaseCrud';
 import { Transaction } from '@/types/finance';
 import { useCallback } from 'react';
 
 export function useTransactions() {
-  const { items: transactions, add, remove, update, setItems } = useLocalCrud<Transaction>('finance_transactions');
+  const { items: transactions, isLoading, add, remove, update } = useSupabaseCrud<Transaction>('transactions');
 
   const addTransaction = useCallback(
     (t: Omit<Transaction, 'id' | 'createdAt'>) => {
-      const newT = { ...t, id: crypto.randomUUID(), createdAt: new Date().toISOString() } as Transaction;
-      setItems((prev) => [newT, ...prev]);
-      return newT;
+      return add({ ...t, createdAt: new Date().toISOString() } as Omit<Transaction, 'id'>);
     },
-    [setItems],
+    [add],
   );
 
   return {
     transactions,
+    isLoading,
     addTransaction,
     deleteTransaction: remove,
     updateTransaction: update,

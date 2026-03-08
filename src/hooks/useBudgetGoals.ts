@@ -1,23 +1,56 @@
-import { useLocalStorage } from './useLocalStorage';
-import { BudgetGoal, CategoryType } from '@/types/finance';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
+import { BudgetGoal, CategoryType } from '@/types/finance';
+import { supabase } from '@/lib/supabase';
+import { toCamelCase } from '@/lib/dbMapper';
+import { logger } from '@/lib/logger';
 
 export function useBudgetGoals() {
-  const [goals, setGoals] = useLocalStorage<BudgetGoal[]>('finance_budget_goals', []);
+  const queryClient = useQueryClient();
+  const queryKey = ['budget_goals'];
 
-  const addGoal = useCallback((category: CategoryType, monthlyLimit: number, currency: string = 'INR') => {
-    setGoals((prev) => {
-      const exists = prev.some((g) => g.category === category);
-      if (exists) {
-        return prev.map((g) => g.category === category ? { ...g, monthlyLimit, currency } : g);
+  const { data: goals = [], isLoading } = useQuery({
+    queryKey,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('budget_goals')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return (data ?? []).map((row) => toCamelCase<BudgetGoal>(row as Record<string, unknown>));
+    },
+  });
+
+  const addGoal = useCallback(
+    async (category: CategoryType, monthlyLimit: number, currency: string = 'INR') => {
+      logger.info('[BudgetGoals] Upsert', { category, monthlyLimit });
+      const { error } = await supabase
+        .from('budget_goals')
+        .upsert(
+          { category, monthly_limit: monthlyLimit, currency },
+          { onConflict: 'user_id,category' },
+        );
+
+      if (error) {
+        logger.error('[BudgetGoals] Upsert error', error.message);
+        throw error;
       }
-      return [...prev, { id: crypto.randomUUID(), category, monthlyLimit, currency }];
-    });
-  }, [setGoals]);
 
-  const deleteGoal = useCallback((id: string) => {
-    setGoals((prev) => prev.filter((g) => g.id !== id));
-  }, [setGoals]);
+      queryClient.invalidateQueries({ queryKey });
+    },
+    [queryClient],
+  );
 
-  return { goals, addGoal, deleteGoal };
+  const deleteGoal = useCallback(
+    async (id: string) => {
+      logger.info('[BudgetGoals] Delete', id);
+      const { error } = await supabase.from('budget_goals').delete().eq('id', id);
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey });
+    },
+    [queryClient],
+  );
+
+  return { goals, isLoading, addGoal, deleteGoal };
 }

@@ -1,10 +1,12 @@
 /**
- * JSON backup & restore for all localStorage data.
+ * JSON backup & restore.
+ * Exports from Supabase (primary) with localStorage fallback.
  */
+import { supabase } from './supabase';
 import { logger } from './logger';
 import { analytics } from './analytics';
 
-const STORAGE_KEYS = [
+const LOCAL_STORAGE_KEYS = [
   'finance_transactions',
   'finance_bank_accounts',
   'finance_credit_cards',
@@ -16,18 +18,46 @@ const STORAGE_KEYS = [
   'finance_chat_messages',
 ];
 
-export function exportBackup() {
+export async function exportBackup() {
   const data: Record<string, unknown> = {};
-  STORAGE_KEYS.forEach((key) => {
-    const raw = localStorage.getItem(key);
-    if (raw) {
-      try {
-        data[key] = JSON.parse(raw);
-      } catch {
-        logger.warn(`[Backup] Failed to parse key "${key}"`);
+
+  try {
+    // Try Supabase first
+    const [accounts, cards, transactions, loans, assets, budgetGoals, goals, contributions, chatMessages] = await Promise.all([
+      supabase.from('bank_accounts').select('*'),
+      supabase.from('credit_cards').select('*'),
+      supabase.from('transactions').select('*'),
+      supabase.from('loans').select('*'),
+      supabase.from('assets').select('*'),
+      supabase.from('budget_goals').select('*'),
+      supabase.from('financial_goals').select('*'),
+      supabase.from('goal_contributions').select('*'),
+      supabase.from('chat_messages').select('*'),
+    ]);
+
+    data['bank_accounts'] = accounts.data ?? [];
+    data['credit_cards'] = cards.data ?? [];
+    data['transactions'] = transactions.data ?? [];
+    data['loans'] = loans.data ?? [];
+    data['assets'] = assets.data ?? [];
+    data['budget_goals'] = budgetGoals.data ?? [];
+    data['financial_goals'] = goals.data ?? [];
+    data['goal_contributions'] = contributions.data ?? [];
+    data['chat_messages'] = chatMessages.data ?? [];
+  } catch (err) {
+    // Fallback to localStorage
+    logger.warn('[Backup] Supabase export failed, falling back to localStorage', err);
+    LOCAL_STORAGE_KEYS.forEach((key) => {
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        try {
+          data[key] = JSON.parse(raw);
+        } catch {
+          logger.warn(`[Backup] Failed to parse key "${key}"`);
+        }
       }
-    }
-  });
+    });
+  }
 
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
@@ -49,7 +79,8 @@ export function importBackup(file: File): Promise<{ success: boolean; keysRestor
         const data = JSON.parse(reader.result as string);
         let keysRestored = 0;
 
-        STORAGE_KEYS.forEach((key) => {
+        // Write to localStorage as staging (migration hook will pick it up)
+        LOCAL_STORAGE_KEYS.forEach((key) => {
           if (data[key] !== undefined) {
             localStorage.setItem(key, JSON.stringify(data[key]));
             keysRestored++;
@@ -57,7 +88,7 @@ export function importBackup(file: File): Promise<{ success: boolean; keysRestor
         });
 
         analytics.track('backup_imported', { keysRestored });
-        logger.info('[Backup] Import complete', { keysRestored });
+        logger.info('[Backup] Import complete — reload page to trigger migration', { keysRestored });
         resolve({ success: true, keysRestored });
       } catch (err) {
         logger.error('[Backup] Import failed', err);
