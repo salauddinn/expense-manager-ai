@@ -6,6 +6,7 @@ import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { AlertsBanner } from '@/components/AlertsBanner';
 import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { TransactionRow } from '@/components/TransactionRow';
 import { Section } from '@/components/shared/Section';
 import { useTransactions } from '@/hooks/useTransactions';
@@ -13,7 +14,7 @@ import { useBankAccounts } from '@/hooks/useBankAccounts';
 import { useCreditCards } from '@/hooks/useCreditCards';
 import { useLoans } from '@/hooks/useLoans';
 import { useAssets } from '@/hooks/useAssets';
-import { formatCurrency } from '@/lib/currencies';
+import { formatCurrency, DEFAULT_CURRENCY } from '@/lib/currencies';
 import { sumBy, CHART_TOOLTIP_STYLE } from '@/lib/shared';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -23,7 +24,7 @@ import {
 } from 'date-fns';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Transaction } from '@/types/finance';
-import { TrendingUp, TrendingDown, ArrowUpRight } from 'lucide-react';
+import { TrendingUp, TrendingDown, ArrowUpRight, MessageSquare } from 'lucide-react';
 
 function getMonthlyChartData(transactions: Transaction[]) {
   return Array.from({ length: 6 }, (_, i) => {
@@ -48,7 +49,6 @@ function getGreeting() {
   return 'Good evening';
 }
 
-/** Maps accent names to explicit Tailwind classes (dynamic classes are purged in production). */
 const ACCENT_BORDER: Record<string, string> = {
   primary: 'accent-border-primary',
   destructive: 'accent-border-destructive',
@@ -66,6 +66,9 @@ export default function Dashboard() {
   const { cards } = useCreditCards();
   const { loans } = useLoans();
   const { assets } = useAssets();
+
+  // Use primary currency from first account, or default
+  const primaryCurrency = accounts[0]?.currency ?? DEFAULT_CURRENCY;
 
   const totalBankBalance = sumBy(accounts, (a) => a.balance);
   const totalCreditDebt = sumBy(cards, (c) => c.outstanding);
@@ -94,7 +97,7 @@ export default function Dashboard() {
         <CardContent className="py-5 px-5">
           <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Net Worth</p>
           <p className={`text-4xl font-extrabold tracking-tight ${netWorth >= 0 ? 'text-foreground' : 'text-destructive'}`}>
-            {netWorth < 0 && '−'}{formatCurrency(Math.abs(netWorth), 'INR')}
+            {netWorth < 0 && '−'}{formatCurrency(Math.abs(netWorth), primaryCurrency)}
           </p>
           <div className="flex items-center gap-1 mt-2">
             {netWorth >= 0 ? (
@@ -111,10 +114,10 @@ export default function Dashboard() {
 
       {/* Quick Stats */}
       <div className="grid grid-cols-2 gap-3 mb-6">
-        <StatCard title="Bank Balance" value={formatCurrency(totalBankBalance, 'INR')} accent="primary" />
-        <StatCard title="Credit Debt" value={formatCurrency(totalCreditDebt, 'INR')} accent="destructive" />
-        <StatCard title="Assets" value={formatCurrency(totalAssetValue, 'INR')} accent="success" />
-        <StatCard title="Loans" value={formatCurrency(totalLoanOutstanding, 'INR')} accent="warning" />
+        <StatCard title="Bank Balance" value={formatCurrency(totalBankBalance, primaryCurrency)} accent="primary" />
+        <StatCard title="Credit Debt" value={formatCurrency(totalCreditDebt, primaryCurrency)} accent="destructive" />
+        <StatCard title="Assets" value={formatCurrency(totalAssetValue, primaryCurrency)} accent="success" />
+        <StatCard title="Loans" value={formatCurrency(totalLoanOutstanding, primaryCurrency)} accent="warning" />
       </div>
 
       {/* Income vs Expenses Chart */}
@@ -157,9 +160,14 @@ export default function Dashboard() {
         <Card>
           <CardContent className="py-1 px-4">
             {recentTransactions.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-10 text-center">
-                No transactions yet. Use Chat to add one.
-              </p>
+              <div className="text-center py-10">
+                <p className="text-sm text-muted-foreground mb-3">No transactions yet</p>
+                <Link to="/chat">
+                  <Button size="sm" variant="outline" className="gap-1.5 rounded-full">
+                    <MessageSquare className="h-3.5 w-3.5" /> Add via Chat
+                  </Button>
+                </Link>
+              </div>
             ) : (
               <div className="divide-y divide-border">
                 {recentTransactions.map((t) => (

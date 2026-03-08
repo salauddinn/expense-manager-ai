@@ -1,10 +1,12 @@
 import { useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Section } from '@/components/shared/Section';
 import { useTransactions } from '@/hooks/useTransactions';
 import { getCategoryInfo } from '@/lib/categories';
-import { formatCurrency } from '@/lib/currencies';
+import { formatCurrency, DEFAULT_CURRENCY } from '@/lib/currencies';
 import { CHART_TOOLTIP_STYLE } from '@/lib/shared';
 import { CategoryType } from '@/types/finance';
 import {
@@ -14,6 +16,7 @@ import {
 import {
   startOfMonth, endOfMonth, subMonths, isWithinInterval, format,
 } from 'date-fns';
+import { MessageSquare } from 'lucide-react';
 
 const COLORS = [
   'hsl(230, 75%, 58%)', 'hsl(152, 60%, 38%)', 'hsl(0, 72%, 51%)',
@@ -25,13 +28,13 @@ const COLORS = [
 export default function Insights() {
   const { transactions } = useTransactions();
 
-  // Stable month boundaries — recomputed only when transactions change
+  const primaryCurrency = transactions[0]?.currency ?? DEFAULT_CURRENCY;
+
   const { categoryBreakdown, totalSpent, monthlyTrend, biggestExpenses } = useMemo(() => {
     const now = new Date();
     const monthStart = startOfMonth(now);
     const monthEnd = endOfMonth(now);
 
-    // Category breakdown
     const map: Record<string, number> = {};
     transactions
       .filter((t) => t.type === 'expense' && isWithinInterval(new Date(t.date), { start: monthStart, end: monthEnd }))
@@ -47,7 +50,6 @@ export default function Insights() {
 
     const totalSpent = categoryBreakdown.reduce((s, c) => s + c.value, 0);
 
-    // Monthly trend
     const monthlyTrend = Array.from({ length: 6 }, (_, i) => {
       const date = subMonths(now, 5 - i);
       const start = startOfMonth(date);
@@ -61,7 +63,6 @@ export default function Insights() {
       return { name: format(date, 'MMM'), expense, income };
     });
 
-    // Top expenses
     const biggestExpenses = transactions
       .filter((t) => t.type === 'expense' && isWithinInterval(new Date(t.date), { start: monthStart, end: monthEnd }))
       .sort((a, b) => b.amount - a.amount)
@@ -78,7 +79,12 @@ export default function Insights() {
         <div className="text-center py-20 text-muted-foreground">
           <p className="text-4xl mb-3">📊</p>
           <p className="text-sm font-medium">No data yet</p>
-          <p className="text-xs mt-1">Add transactions via Chat to see insights</p>
+          <p className="text-xs mt-1 mb-4">Add transactions via Chat to see insights</p>
+          <Link to="/chat">
+            <Button size="sm" variant="outline" className="gap-1.5 rounded-full">
+              <MessageSquare className="h-3.5 w-3.5" /> Go to Chat
+            </Button>
+          </Link>
         </div>
       ) : (
         <>
@@ -108,14 +114,14 @@ export default function Insights() {
                             ))}
                           </Pie>
                           <Tooltip
-                            formatter={(value: number) => formatCurrency(value, 'INR')}
+                            formatter={(value: number) => formatCurrency(value, primaryCurrency)}
                             contentStyle={CHART_TOOLTIP_STYLE}
                           />
                         </PieChart>
                       </ResponsiveContainer>
                     </div>
                     <div className="text-center mb-4">
-                      <p className="text-2xl font-bold">{formatCurrency(totalSpent, transactions[0]?.currency ?? 'INR')}</p>
+                      <p className="text-2xl font-bold">{formatCurrency(totalSpent, primaryCurrency)}</p>
                       <p className="text-[11px] text-muted-foreground">total spent this month</p>
                     </div>
                     <div className="space-y-2">
@@ -129,7 +135,7 @@ export default function Insights() {
                             <span className="text-xs font-medium">{cat.icon} {cat.name}</span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="text-xs font-semibold tabular-nums">{formatCurrency(cat.value, 'INR')}</span>
+                            <span className="text-xs font-semibold tabular-nums">{formatCurrency(cat.value, primaryCurrency)}</span>
                             <span className="text-[10px] text-muted-foreground w-10 text-right">
                               {totalSpent > 0 ? Math.round((cat.value / totalSpent) * 100) : 0}%
                             </span>
@@ -158,7 +164,7 @@ export default function Insights() {
                       />
                       <YAxis hide />
                       <Tooltip
-                        formatter={(value: number) => formatCurrency(value, 'INR')}
+                        formatter={(value: number) => formatCurrency(value, primaryCurrency)}
                         contentStyle={CHART_TOOLTIP_STYLE}
                       />
                       <Bar dataKey="income" fill="hsl(var(--success))" radius={[6, 6, 6, 6]} />

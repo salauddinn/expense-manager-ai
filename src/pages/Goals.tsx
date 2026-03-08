@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,9 +7,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { useFinancialGoals } from '@/hooks/useFinancialGoals';
 import { formatCurrency } from '@/lib/currencies';
-import { Plus, Trash2, Target, TrendingUp } from 'lucide-react';
+import { Plus, Trash2, Target, TrendingUp, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
 
 const GOAL_ICONS = ['🏖️', '🚨', '🏠', '🚗', '📚', '💍', '🎮', '✈️', '💻', '🎯'];
@@ -112,7 +114,12 @@ export default function Goals() {
             <Target className="h-8 w-8 opacity-40" strokeWidth={1.5} />
           </div>
           <p className="text-sm font-medium">No goals yet</p>
-          <p className="text-xs mt-1">Set a savings target and track your progress</p>
+          <p className="text-xs mt-1 mb-4">Set a savings target and track your progress</p>
+          <Link to="/chat">
+            <Button size="sm" variant="outline" className="gap-1.5 rounded-full">
+              <MessageSquare className="h-3.5 w-3.5" /> Add via Chat
+            </Button>
+          </Link>
         </div>
       ) : (
         <div className="space-y-3">
@@ -139,14 +146,20 @@ export default function Goals() {
                         )}
                       </div>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={() => { deleteGoal(goal.id); toast.success('Goal removed'); }}
-                    >
-                      <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
-                    </Button>
+                    <ConfirmDialog
+                      trigger={
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
+                        </Button>
+                      }
+                      title={`Delete "${goal.name}"?`}
+                      description={`This will remove the goal and all tracked progress (${formatCurrency(goal.currentAmount, goal.currency)} saved).`}
+                      onConfirm={() => { deleteGoal(goal.id); toast.success('Goal removed'); }}
+                    />
                   </div>
 
                   <Progress
