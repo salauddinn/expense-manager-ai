@@ -107,7 +107,7 @@ export default function Dashboard() {
           value={formatCurrency(totalAssetValue, 'INR')}
         />
         <StatCard
-          icon={<Receipt className="h-4 w-4 text-amber-600" />}
+          icon={<Receipt className="h-4 w-4 text-warning" />}
           label="Loan Outstanding"
           value={formatCurrency(totalLoanOutstanding, 'INR')}
         />
