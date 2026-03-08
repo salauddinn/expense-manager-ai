@@ -8,6 +8,7 @@ import Chat from "./pages/Chat";
 import Transactions from "./pages/Transactions";
 import LoanCalculator from "./pages/LoanCalculator";
 import Accounts from "./pages/Accounts";
+import AccountDetail from "./pages/AccountDetail";
 import Budget from "./pages/Budget";
 import Insights from "./pages/Insights";
 import Goals from "./pages/Goals";
@@ -28,6 +29,7 @@ const App = () => (
           <Route path="/transactions" element={<Transactions />} />
           <Route path="/loan-calculator" element={<LoanCalculator />} />
           <Route path="/accounts" element={<Accounts />} />
+          <Route path="/accounts/:id" element={<AccountDetail />} />
           <Route path="/budget" element={<Budget />} />
           <Route path="/insights" element={<Insights />} />
           <Route path="/goals" element={<Goals />} />
