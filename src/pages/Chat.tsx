@@ -5,6 +5,7 @@
  * falls back to rule-based parser otherwise.
  */
 
+
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
@@ -27,6 +28,8 @@ import {
   HELP_TEXT, EmptyState, MessageBubble,
 } from '@/components/ChatComponents';
 import { Send, ImagePlus, Sparkles, Loader2, Trash2 } from 'lucide-react';
+import { logger } from '@/lib/logger';
+import { analytics } from '@/lib/analytics';
 import { toast } from 'sonner';
 
 export default function Chat() {
@@ -168,7 +171,7 @@ export default function Chat() {
           prev.map((m) => m.id === loadingMsgId ? { ...m, content: result.message, isLoading: false, parsedIntent, confirmed: undefined } : m),
         );
       } catch (error) {
-        console.error('LLM error:', error instanceof Error ? error.message : error);
+        logger.error('LLM call failed', error instanceof Error ? error.message : error);
 
         // Fallback to rule-based parser
         const parsed = parseMessageFull(text);
@@ -294,6 +297,7 @@ export default function Chat() {
       }
 
       const successMsg = successMessages[intent.intent] ?? '✅ Saved!';
+      analytics.track('entity_confirmed', { intent: intent.intent });
       setMessages((prev) =>
         prev.map((m) => m.id === msg.id ? { ...m, confirmed: true, content: successMsg } : m),
       );
