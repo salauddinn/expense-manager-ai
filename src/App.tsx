@@ -15,6 +15,8 @@ import Budget from "./pages/Budget";
 import Insights from "./pages/Insights";
 import Goals from "./pages/Goals";
 import Install from "./pages/Install";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsConditions from "./pages/TermsConditions";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
