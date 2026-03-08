@@ -60,9 +60,10 @@ export function useChatActions() {
       switch (parsed.intent) {
         case 'transaction': {
           const d = parsed.data;
+          const cashbackText = d.cashback ? ` with cashback **${formatCurrency(d.cashback, d.currency)}**` : '';
           const sourceText = d.sourceName ? ` from **${d.sourceName}**` : '';
           return {
-            content: `I detected a **${d.type}** of **${formatCurrency(d.amount, d.currency)}** in category **${getCategoryInfo(d.category).label}**${sourceText}. Shall I save this?`,
+            content: `I detected a **${d.type}** of **${formatCurrency(d.amount, d.currency)}** in category **${getCategoryInfo(d.category).label}**${sourceText}${cashbackText}. Shall I save this?`,
             parsedIntent: { intent: 'transaction', data: { ...d, receiptUrl: imageUrl } },
           };
         }
@@ -216,9 +217,9 @@ export function useChatActions() {
 
       switch (intent.intent) {
         case 'transaction': {
-          const { type, amount, currency, category, description, date, receiptUrl, sourceName, sourceIsCard } = intent.data as any;
+          const { type, amount, currency, category, description, date, receiptUrl, sourceName, sourceIsCard, cashback } = intent.data as any;
           const linkedIds = resolveLinkedSource(sourceName, sourceIsCard);
-          addTransaction({ type, amount, currency, category, description, date, receiptUrl, ...linkedIds });
+          addTransaction({ type, amount, currency, category, description, date, receiptUrl, ...linkedIds, ...(cashback && { cashback }) });
           if (linkedIds.linkedAccountId) {
             const delta = type === 'expense' ? -amount : amount;
             const account = accounts.find((a) => a.id === linkedIds.linkedAccountId);
