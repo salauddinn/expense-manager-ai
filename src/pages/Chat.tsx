@@ -565,11 +565,14 @@ function EmptyState({ visible }: { visible: boolean }) {
   if (!visible) return null;
 
   return (
-    <div className="text-center py-10 text-muted-foreground space-y-4">
-      <p className="text-sm font-medium">Try these examples</p>
+    <div className="text-center py-12 text-muted-foreground space-y-5">
+      <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
+        <Sparkles className="h-6 w-6 text-primary" />
+      </div>
+      <p className="text-sm font-semibold text-foreground">Try these examples</p>
       <div className="flex flex-wrap justify-center gap-2">
         {EXAMPLES.map(({ emoji, text }) => (
-          <span key={text} className="inline-flex items-center gap-1 text-xs bg-secondary px-3 py-1.5 rounded-full">
+          <span key={text} className="inline-flex items-center gap-1.5 text-xs bg-card border border-border px-3.5 py-2 rounded-full hover:bg-muted transition-colors cursor-default">
             {emoji} {text}
           </span>
         ))}
