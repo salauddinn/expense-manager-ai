@@ -48,7 +48,6 @@ export function LLMSettingsDialog() {
   };
 
   const models = PROVIDER_MODELS[settings.provider];
-  const maskedKey = tempKey ? `${tempKey.slice(0, 8)}${'•'.repeat(Math.max(0, tempKey.length - 12))}${tempKey.slice(-4)}` : '';
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
