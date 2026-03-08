@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { TransactionRow } from '@/components/TransactionRow';
+import { AddTransactionDialog } from '@/components/AddTransactionDialog';
 import { useTransactions } from '@/hooks/useTransactions';
 import { formatCurrency, CURRENCIES } from '@/lib/currencies';
 import { ALL_CATEGORIES as CATEGORIES } from '@/lib/categories';
