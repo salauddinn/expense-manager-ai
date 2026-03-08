@@ -516,8 +516,8 @@ export default function Chat() {
       />
 
       {/* Input bar */}
-      <div className="fixed bottom-20 left-0 right-0 bg-background/95 backdrop-blur border-t px-4 py-3">
-        <div className="mx-auto max-w-lg flex gap-2">
+      <div className="fixed bottom-14 left-0 right-0 bg-card/95 backdrop-blur-sm px-5 py-3">
+        <div className="mx-auto max-w-2xl flex gap-2">
           <Button
             variant="outline"
             size="icon"
