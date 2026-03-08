@@ -57,9 +57,12 @@ export default function Transactions() {
     <AppLayout>
       <div className="flex items-center justify-between mb-5">
         <h1 className="text-xl font-bold text-foreground tracking-tight">Transactions</h1>
-        <Button variant="ghost" size="sm" onClick={handleExport} className="gap-1.5 text-muted-foreground hover:text-foreground text-xs">
-          <Download className="h-3.5 w-3.5" /> Export
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" onClick={handleExport} className="gap-1.5 text-muted-foreground hover:text-foreground text-xs">
+            <Download className="h-3.5 w-3.5" /> Export
+          </Button>
+          <AddTransactionDialog onAdd={addTransaction} />
+        </div>
       </div>
 
       {/* Search */}
