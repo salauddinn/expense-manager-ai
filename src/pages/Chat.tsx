@@ -617,16 +617,15 @@ function MessageBubble({ message, showActions, onConfirm, onReject }: MessageBub
 
             {showActions && (
               <div className="flex gap-2 mt-3">
-                <Button size="sm" onClick={onConfirm} className="gap-1">
+                <Button size="sm" onClick={onConfirm} className="gap-1 rounded-full">
                   <Check className="h-3 w-3" /> Save
                 </Button>
-                <Button size="sm" variant="outline" onClick={onReject} className="gap-1">
+                <Button size="sm" variant="outline" onClick={onReject} className="gap-1 rounded-full">
                   <X className="h-3 w-3" /> Discard
                 </Button>
               </div>
             )}
-          </CardContent>
-        </Card>
+        </div>
 
         <p className="text-[10px] text-muted-foreground mt-1 px-1">
           {new Date(message.timestamp).toLocaleTimeString([], {
