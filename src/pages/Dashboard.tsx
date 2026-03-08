@@ -73,7 +73,9 @@ export default function Dashboard() {
         <p className="text-sm text-muted-foreground mt-0.5">{format(new Date(), 'EEEE, d MMMM')}</p>
       </div>
 
-      {/* Net Worth — Flat card with accent bar */}
+      {/* Alerts */}
+      <AlertsBanner />
+
       <Card className="mb-6 accent-border-primary border-l-4">
         <CardContent className="py-5 px-5">
           <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Net Worth</p>

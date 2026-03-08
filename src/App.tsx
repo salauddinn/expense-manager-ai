@@ -9,6 +9,8 @@ import Transactions from "./pages/Transactions";
 import LoanCalculator from "./pages/LoanCalculator";
 import Accounts from "./pages/Accounts";
 import Budget from "./pages/Budget";
+import Insights from "./pages/Insights";
+import Goals from "./pages/Goals";
 import Install from "./pages/Install";
 import NotFound from "./pages/NotFound";
 
@@ -27,6 +29,8 @@ const App = () => (
           <Route path="/loan-calculator" element={<LoanCalculator />} />
           <Route path="/accounts" element={<Accounts />} />
           <Route path="/budget" element={<Budget />} />
+          <Route path="/insights" element={<Insights />} />
+          <Route path="/goals" element={<Goals />} />
           <Route path="/install" element={<Install />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
