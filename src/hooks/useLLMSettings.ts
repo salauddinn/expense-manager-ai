@@ -3,6 +3,7 @@
  * The user provides their own API key (stored only in their browser).
  */
 
+import { useCallback } from 'react';
 import { useLocalStorage } from './useLocalStorage';
 
 export type LLMProvider = 'openai' | 'google';
