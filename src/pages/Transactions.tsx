@@ -189,7 +189,7 @@ function EditTransactionDialog({
 
   const handleSave = () => {
     if (!description.trim()) return;
-    onSave({ type, amount, description, category, date: new Date(date).toISOString(), currency });
+    onSave({ type, amount, description, category, date: new Date(date).toISOString(), currency, cashback: cashback || undefined });
   };
 
   return (
