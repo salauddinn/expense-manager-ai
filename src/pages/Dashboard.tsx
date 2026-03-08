@@ -3,6 +3,7 @@
  */
 
 import { useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { AlertsBanner } from '@/components/AlertsBanner';
 import { Card, CardContent } from '@/components/ui/card';
 import { TransactionRow } from '@/components/TransactionRow';
@@ -73,7 +74,10 @@ export default function Dashboard() {
   const netWorth = totalBankBalance + totalAssetValue - totalCreditDebt - totalLoanOutstanding;
 
   const chartData = useMemo(() => getMonthlyChartData(transactions), [transactions]);
-  const recentTransactions = transactions.slice(0, 5);
+  const recentTransactions = useMemo(
+    () => [...transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5),
+    [transactions],
+  );
 
   return (
     <AppLayout>
@@ -145,9 +149,9 @@ export default function Dashboard() {
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Recent Transactions</h2>
           {recentTransactions.length > 0 && (
-            <a href="/transactions" className="text-xs text-primary font-medium flex items-center gap-0.5 hover:underline">
+            <Link to="/transactions" className="text-xs text-primary font-medium flex items-center gap-0.5 hover:underline">
               View all <ArrowUpRight className="h-3 w-3" />
-            </a>
+            </Link>
           )}
         </div>
         <Card>
