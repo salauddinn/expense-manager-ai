@@ -53,7 +53,7 @@ export function useFinancialGoals() {
 
         logger.info('[Goals] Contribution added', { id, amount, newPct: Math.round(pct) });
         if (freshMilestones.length > 0) {
-          analytics.track('goal_milestone', { id, milestones: freshMilestones });
+          analytics.track('goal_milestone', { id, milestones: freshMilestones.join(',') });
         }
 
         return {
