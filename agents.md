@@ -72,9 +72,20 @@ A mobile-first personal finance tracker with a smart chat interface for managing
 - `src/lib/exportData.ts` — CSV export utility
 - `src/lib/loanCalculator.ts` — EMI + amortization logic
 - `src/hooks/useLocalStorage.ts` — Generic localStorage hook (swap target for migration)
+- `src/hooks/useLLMSettings.ts` — LLM provider/API key/model settings (BYOK pattern)
+- `src/lib/llmService.ts` — OpenAI + Google Gemini API caller with tool/function calling
 - `src/types/finance.ts` — All domain type definitions
 - `src/components/layout/AppLayout.tsx` — Shared layout with header + bottom nav
 - `src/components/ThemeToggle.tsx` — Dark/light mode toggle
+- `src/components/LLMSettingsDialog.tsx` — API key configuration dialog
+
+## LLM Integration (BYOK — Bring Your Own Key)
+- Users provide their own OpenAI or Google Gemini API key (stored in localStorage only)
+- API key is **never** sent to any server except the chosen provider's API
+- Uses **tool/function calling** for structured output extraction (not JSON prompting)
+- Supports: OpenAI (gpt-4o-mini, gpt-4o, gpt-3.5-turbo) and Google Gemini (2.0 Flash, 2.5 Flash, 2.5 Pro)
+- Graceful fallback: if LLM call fails, automatically uses rule-based parser
+- Settings accessible via ⚙️ icon in app header (green dot when configured)
 
 ## Design System
 - HSL-based color tokens in `src/index.css` (light + dark modes)

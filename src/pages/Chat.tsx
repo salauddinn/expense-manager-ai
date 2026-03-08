@@ -1,8 +1,8 @@
 /**
  * Chat Page — Smart financial assistant.
  *
- * Handles natural language input for transactions, accounts, cards,
- * assets, loans, budgets, and financial queries.
+ * Uses LLM (OpenAI/Gemini) when API key is configured,
+ * falls back to rule-based parser otherwise.
  */
 
 import { useState, useRef, useEffect, useCallback } from 'react';
@@ -16,12 +16,14 @@ import { useCreditCards } from '@/hooks/useCreditCards';
 import { useAssets } from '@/hooks/useAssets';
 import { useLoans } from '@/hooks/useLoans';
 import { useBudgetGoals } from '@/hooks/useBudgetGoals';
+import { useLLMSettings } from '@/hooks/useLLMSettings';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { parseMessageFull, ParsedIntent } from '@/lib/chatParser';
+import { callLLM, mapLLMResultToIntent } from '@/lib/llmService';
 import { formatCurrency } from '@/lib/currencies';
 import { getCategoryInfo } from '@/lib/categories';
-import { Transaction, CategoryType } from '@/types/finance';
-import { Send, Check, X, ImagePlus } from 'lucide-react';
+import { CategoryType } from '@/types/finance';
+import { Send, Check, X, ImagePlus, Sparkles, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   startOfDay, startOfWeek, startOfMonth, startOfYear, isAfter,
@@ -39,6 +41,7 @@ interface ChatMessage {
   imageUrl?: string;
   parsedIntent?: ParsedIntent;
   confirmed?: boolean;
+  isLoading?: boolean;
 }
 
 // ────────────────────────────────────────────────────────────────
@@ -96,6 +99,7 @@ const PERIOD_LABELS: Record<string, string> = {
 export default function Chat() {
   const [messages, setMessages] = useLocalStorage<ChatMessage[]>('finance_chat_messages', []);
   const [input, setInput] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
 
   // Data hooks
   const { transactions, addTransaction } = useTransactions();
@@ -104,17 +108,17 @@ export default function Chat() {
   const { assets, addAsset } = useAssets();
   const { loans, addLoan } = useLoans();
   const { addGoal } = useBudgetGoals();
+  const { settings: llmSettings, isConfigured: isLLMConfigured } = useLLMSettings();
 
   // Refs
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Auto-scroll on new messages
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // ── Query answering ──
+  // ── Query answering (used by rule-based parser and LLM query fallback) ──
 
   const answerQuery = useCallback(
     (query: { queryType: string; category?: string; period?: string }): string => {
@@ -128,7 +132,6 @@ export default function Chat() {
 
       const periodLabel = PERIOD_LABELS[query.period ?? 'this_month'] ?? 'this month';
 
-      // Balance / Net Worth query
       if (query.queryType === 'balance') {
         const bankTotal = accounts.reduce((sum, a) => sum + a.balance, 0);
         const cardDebt = cards.reduce((sum, c) => sum + c.outstanding, 0);
@@ -147,15 +150,14 @@ export default function Chat() {
         ].join('\n');
       }
 
-      // Transaction-based queries
       const filtered = transactions.filter((t) => {
         const date = new Date(t.date);
-        const matchesDate = isAfter(date, periodStart);
-        const matchesType =
-          query.queryType === 'spending' ? t.type === 'expense' :
-          query.queryType === 'income' ? t.type === 'income' : true;
-        const matchesCategory = query.category ? t.category === query.category : true;
-        return matchesDate && matchesType && matchesCategory;
+        return (
+          isAfter(date, periodStart) &&
+          (query.queryType === 'spending' ? t.type === 'expense' :
+           query.queryType === 'income' ? t.type === 'income' : true) &&
+          (query.category ? t.category === query.category : true)
+        );
       });
 
       const total = filtered.reduce((sum, t) => sum + t.amount, 0);
@@ -170,7 +172,6 @@ export default function Chat() {
         return `📈 You earned **${formatCurrency(total, 'INR')}** ${periodLabel} across **${filtered.length}** transactions.`;
       }
 
-      // Summary
       const income = filtered.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0);
       const expense = filtered.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
 
@@ -185,20 +186,16 @@ export default function Chat() {
     [transactions, accounts, cards, loans, assets],
   );
 
-  // ── Response builder ──
+  // ── Build response from parsed intent (rule-based) ──
 
   const buildResponse = useCallback(
     (parsed: ParsedIntent, imageUrl?: string): { content: string; parsedIntent?: ParsedIntent } => {
       switch (parsed.intent) {
         case 'transaction': {
           const d = parsed.data;
-          const intentWithReceipt: ParsedIntent = {
-            intent: 'transaction',
-            data: { ...d, receiptUrl: imageUrl },
-          };
           return {
             content: `I detected a **${d.type}** of **${formatCurrency(d.amount, d.currency)}** in category **${getCategoryInfo(d.category).label}**. Shall I save this?`,
-            parsedIntent: intentWithReceipt,
+            parsedIntent: { intent: 'transaction', data: { ...d, receiptUrl: imageUrl } },
           };
         }
         case 'bank_account': {
@@ -248,7 +245,95 @@ export default function Chat() {
     [answerQuery],
   );
 
-  // ── Handlers ──
+  // ── Process with LLM ──
+
+  const processWithLLM = useCallback(
+    async (text: string, loadingMsgId: string, imageUrl?: string) => {
+      try {
+        const result = await callLLM(
+          llmSettings.provider,
+          llmSettings.apiKey,
+          llmSettings.model,
+          text,
+        );
+
+        const mapped = mapLLMResultToIntent(result);
+
+        // For queries, use the LLM's natural language response directly
+        if (mapped.intent === 'query') {
+          // Use LLM message if available, otherwise fall back to our query engine
+          const content = result.message || answerQuery(mapped.data as any);
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === loadingMsgId
+                ? { ...m, content, isLoading: false, confirmed: false }
+                : m,
+            ),
+          );
+          return;
+        }
+
+        if (mapped.intent === 'unknown') {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === loadingMsgId
+                ? { ...m, content: result.message || HELP_TEXT, isLoading: false, confirmed: false }
+                : m,
+            ),
+          );
+          return;
+        }
+
+        // Actionable intent — show confirmation
+        const parsedIntent = mapped as ParsedIntent;
+        if (parsedIntent.intent === 'transaction' && imageUrl) {
+          (parsedIntent.data as any).receiptUrl = imageUrl;
+        }
+
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === loadingMsgId
+              ? {
+                  ...m,
+                  content: result.message,
+                  isLoading: false,
+                  parsedIntent,
+                  confirmed: undefined,
+                }
+              : m,
+          ),
+        );
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+        console.error('LLM error:', errorMsg);
+
+        // Fallback to rule-based parser
+        const parsed = parseMessageFull(text);
+        const { content, parsedIntent } = buildResponse(parsed, imageUrl);
+        const isActionable = parsed.intent !== 'query' && parsed.intent !== 'unknown';
+
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === loadingMsgId
+              ? {
+                  ...m,
+                  content: `⚠️ AI unavailable, using smart parser:\n\n${content}`,
+                  isLoading: false,
+                  parsedIntent: isActionable ? parsedIntent : undefined,
+                  confirmed: isActionable ? undefined : false,
+                }
+              : m,
+          ),
+        );
+        toast.error('AI call failed, used rule-based parser instead');
+      } finally {
+        setIsProcessing(false);
+      }
+    },
+    [llmSettings, answerQuery, buildResponse, setMessages],
+  );
+
+  // ── Send message ──
 
   const handleSend = useCallback(
     (imageUrl?: string) => {
@@ -257,29 +342,43 @@ export default function Chat() {
 
       const userMsg = createMessage('user', text || '📷 Receipt uploaded', { imageUrl });
 
-      let assistantMsg: ChatMessage;
-
       if (imageUrl && !text) {
-        assistantMsg = createMessage(
+        const assistantMsg = createMessage(
           'assistant',
           '📷 Receipt received! Please describe the transaction (e.g., "spent ₹500 on groceries") so I can save it.',
         );
-      } else {
-        const parsed = parseMessageFull(text);
-        const { content, parsedIntent } = buildResponse(parsed, imageUrl);
-        const isActionable = parsed.intent !== 'query' && parsed.intent !== 'unknown';
-
-        assistantMsg = createMessage('assistant', content, {
-          parsedIntent: isActionable ? parsedIntent : undefined,
-          confirmed: isActionable ? undefined : false,
-        });
+        setMessages((prev) => [...prev, userMsg, assistantMsg]);
+        setInput('');
+        return;
       }
+
+      // LLM path — async with loading state
+      if (isLLMConfigured) {
+        const loadingMsg = createMessage('assistant', 'Thinking...', { isLoading: true });
+        setMessages((prev) => [...prev, userMsg, loadingMsg]);
+        setInput('');
+        setIsProcessing(true);
+        processWithLLM(text, loadingMsg.id, imageUrl);
+        return;
+      }
+
+      // Rule-based path — instant
+      const parsed = parseMessageFull(text);
+      const { content, parsedIntent } = buildResponse(parsed, imageUrl);
+      const isActionable = parsed.intent !== 'query' && parsed.intent !== 'unknown';
+
+      const assistantMsg = createMessage('assistant', content, {
+        parsedIntent: isActionable ? parsedIntent : undefined,
+        confirmed: isActionable ? undefined : false,
+      });
 
       setMessages((prev) => [...prev, userMsg, assistantMsg]);
       setInput('');
     },
-    [input, buildResponse, setMessages],
+    [input, isLLMConfigured, buildResponse, processWithLLM, setMessages],
   );
+
+  // ── Confirm / Reject ──
 
   const handleConfirm = useCallback(
     (msg: ChatMessage) => {
@@ -295,7 +394,6 @@ export default function Chat() {
         budget: '✅ Budget goal saved!',
       };
 
-      // Execute the action
       switch (intent.intent) {
         case 'transaction': {
           const { type, amount, currency, category, description, date, receiptUrl } = intent.data;
@@ -322,7 +420,6 @@ export default function Chat() {
       }
 
       const successMsg = successMessages[intent.intent] ?? '✅ Saved!';
-
       setMessages((prev) =>
         prev.map((m) =>
           m.id === msg.id ? { ...m, confirmed: true, content: successMsg } : m,
@@ -350,12 +447,10 @@ export default function Chat() {
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file) return;
-
       if (!file.type.startsWith('image/')) {
         toast.error('Please upload an image file');
         return;
       }
-
       const reader = new FileReader();
       reader.onload = () => handleSend(reader.result as string);
       reader.readAsDataURL(file);
@@ -374,16 +469,23 @@ export default function Chat() {
     [handleSend],
   );
 
-  // ── Render helpers ──
-
   const needsConfirmation = (msg: ChatMessage): boolean =>
     !!msg.parsedIntent && msg.confirmed === undefined && msg.parsedIntent.intent !== 'query';
 
   return (
     <AppLayout>
-      <h1 className="mb-2 text-2xl font-bold text-foreground">Smart Chat</h1>
+      <div className="flex items-center gap-2 mb-2">
+        <h1 className="text-2xl font-bold text-foreground">Smart Chat</h1>
+        {isLLMConfigured && (
+          <span className="inline-flex items-center gap-1 text-[10px] font-medium bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+            <Sparkles className="h-3 w-3" /> AI
+          </span>
+        )}
+      </div>
       <p className="text-xs text-muted-foreground mb-4">
-        Add transactions, accounts, cards, assets, loans, budgets — or ask questions!
+        {isLLMConfigured
+          ? 'AI-powered — understands complex sentences naturally.'
+          : 'Add your API key in ⚙️ settings to enable AI mode.'}
       </p>
 
       {/* Message list */}
@@ -422,6 +524,7 @@ export default function Chat() {
             className="shrink-0"
             onClick={() => fileInputRef.current?.click()}
             aria-label="Upload receipt"
+            disabled={isProcessing}
           >
             <ImagePlus className="h-4 w-4" />
           </Button>
@@ -430,17 +533,22 @@ export default function Chat() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Try: spent ₹500 on groceries..."
+            placeholder={isLLMConfigured ? 'Ask anything about your finances...' : 'Try: spent ₹500 on groceries...'}
             className="flex-1"
+            disabled={isProcessing}
           />
 
           <Button
             onClick={() => handleSend()}
             size="icon"
-            disabled={!input.trim()}
+            disabled={!input.trim() || isProcessing}
             aria-label="Send message"
           >
-            <Send className="h-4 w-4" />
+            {isProcessing ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4" />
+            )}
           </Button>
         </div>
       </div>
@@ -499,7 +607,14 @@ function MessageBubble({ message, showActions, onConfirm, onReject }: MessageBub
               />
             )}
 
-            <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+            {message.isLoading ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Thinking...</span>
+              </div>
+            ) : (
+              <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+            )}
 
             {showActions && (
               <div className="flex gap-2 mt-3">
