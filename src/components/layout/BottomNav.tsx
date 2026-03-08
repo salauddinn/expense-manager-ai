@@ -1,13 +1,13 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { LayoutDashboard, MessageSquare, List, Target, Wallet } from 'lucide-react';
+import { LayoutDashboard, MessageSquare, PieChart, Target, Wallet } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const NAV_ITEMS = [
   { to: '/', label: 'Home', icon: LayoutDashboard },
   { to: '/chat', label: 'Chat', icon: MessageSquare },
-  { to: '/transactions', label: 'History', icon: List },
-  { to: '/budget', label: 'Budget', icon: Target },
-  { to: '/accounts', label: 'Accounts', icon: Wallet },
+  { to: '/insights', label: 'Insights', icon: PieChart },
+  { to: '/goals', label: 'Goals', icon: Target },
+  { to: '/accounts', label: 'More', icon: Wallet },
 ];
 
 export function BottomNav() {

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,7 +12,7 @@ import { useCreditCards } from '@/hooks/useCreditCards';
 import { useAssets } from '@/hooks/useAssets';
 import { formatCurrency, CURRENCIES } from '@/lib/currencies';
 import { BankAccount, CreditCard as CreditCardType, Asset } from '@/types/finance';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, ChevronRight, Calculator, List, CircleDollarSign, Download as DownloadIcon } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function Accounts() {
@@ -21,7 +22,22 @@ export default function Accounts() {
 
   return (
     <AppLayout>
-      <h1 className="text-xl font-semibold text-foreground mb-6">Accounts & Assets</h1>
+      <h1 className="text-xl font-bold text-foreground tracking-tight mb-5">More</h1>
+
+      {/* Quick Links */}
+      <div className="mb-6">
+        <h2 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-3">Quick Links</h2>
+        <Card>
+          <CardContent className="py-1 px-4">
+            <div className="divide-y divide-border">
+              <QuickLink to="/transactions" icon={<List className="h-4 w-4" />} label="Transaction History" />
+              <QuickLink to="/budget" icon={<CircleDollarSign className="h-4 w-4" />} label="Budget Goals" />
+              <QuickLink to="/loan-calculator" icon={<Calculator className="h-4 w-4" />} label="Loan Calculator" />
+              <QuickLink to="/install" icon={<DownloadIcon className="h-4 w-4" />} label="Install App" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Bank Accounts */}
       <Section title="Bank Accounts">
@@ -29,7 +45,7 @@ export default function Accounts() {
         {accounts.length === 0 && <EmptyState text="No bank accounts added" />}
         {accounts.length > 0 && (
           <Card>
-            <CardContent className="py-1">
+            <CardContent className="py-1 px-4">
               <div className="divide-y divide-border">
                 {accounts.map((a) => (
                   <div key={a.id} className="group flex items-center justify-between py-3">
@@ -57,13 +73,16 @@ export default function Accounts() {
         {cards.length === 0 && <EmptyState text="No credit cards added" />}
         {cards.length > 0 && (
           <Card>
-            <CardContent className="py-1">
+            <CardContent className="py-1 px-4">
               <div className="divide-y divide-border">
                 {cards.map((c) => (
                   <div key={c.id} className="group flex items-center justify-between py-3">
                     <div>
                       <p className="text-sm font-medium">{c.name}</p>
-                      <p className="text-[11px] text-muted-foreground">Limit: {formatCurrency(c.limit, c.currency)}</p>
+                      <p className="text-[11px] text-muted-foreground">
+                        Limit: {formatCurrency(c.limit, c.currency)}
+                        {c.dueDate && ` · Due: ${c.dueDate}`}
+                      </p>
                     </div>
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-medium tabular-nums text-destructive">{formatCurrency(c.outstanding, c.currency)}</p>
@@ -85,7 +104,7 @@ export default function Accounts() {
         {assets.length === 0 && <EmptyState text="No assets added" />}
         {assets.length > 0 && (
           <Card>
-            <CardContent className="py-1">
+            <CardContent className="py-1 px-4">
               <div className="divide-y divide-border">
                 {assets.map((a) => (
                   <div key={a.id} className="group flex items-center justify-between py-3">
@@ -110,10 +129,22 @@ export default function Accounts() {
   );
 }
 
+function QuickLink({ to, icon, label }: { to: string; icon: React.ReactNode; label: string }) {
+  return (
+    <Link to={to} className="flex items-center justify-between py-3 hover:bg-muted/50 -mx-4 px-4 transition-colors">
+      <div className="flex items-center gap-3">
+        <div className="text-muted-foreground">{icon}</div>
+        <span className="text-sm font-medium">{label}</span>
+      </div>
+      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+    </Link>
+  );
+}
+
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="mb-6">
-      <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">{title}</h2>
+      <h2 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-3">{title}</h2>
       <div className="space-y-2">{children}</div>
     </div>
   );
@@ -163,7 +194,7 @@ function AddBankDialog({ onAdd }: { onAdd: (a: Omit<BankAccount, 'id'>) => void 
               <SelectContent>{CURRENCIES.map((c) => <SelectItem key={c.code} value={c.code}>{c.symbol} {c.name}</SelectItem>)}</SelectContent>
             </Select>
           </div>
-          <Button onClick={handleAdd} className="w-full">Add Account</Button>
+          <Button onClick={handleAdd} className="w-full rounded-xl h-11">Add Account</Button>
         </div>
       </DialogContent>
     </Dialog>
@@ -203,7 +234,7 @@ function AddCardDialog({ onAdd }: { onAdd: (c: Omit<CreditCardType, 'id'>) => vo
               <SelectContent>{CURRENCIES.map((c) => <SelectItem key={c.code} value={c.code}>{c.symbol} {c.name}</SelectItem>)}</SelectContent>
             </Select>
           </div>
-          <Button onClick={handleAdd} className="w-full">Add Card</Button>
+          <Button onClick={handleAdd} className="w-full rounded-xl h-11">Add Card</Button>
         </div>
       </DialogContent>
     </Dialog>
@@ -251,7 +282,7 @@ function AddAssetDialog({ onAdd }: { onAdd: (a: Omit<Asset, 'id'>) => void }) {
               <SelectContent>{CURRENCIES.map((c) => <SelectItem key={c.code} value={c.code}>{c.symbol} {c.name}</SelectItem>)}</SelectContent>
             </Select>
           </div>
-          <Button onClick={handleAdd} className="w-full">Add Asset</Button>
+          <Button onClick={handleAdd} className="w-full rounded-xl h-11">Add Asset</Button>
         </div>
       </DialogContent>
     </Dialog>

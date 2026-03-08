@@ -73,3 +73,14 @@ export interface BudgetGoal {
   currency: string;
 }
 
+export interface FinancialGoal {
+  id: string;
+  name: string;
+  targetAmount: number;
+  currentAmount: number;
+  currency: string;
+  deadline?: string;
+  icon: string;
+  createdAt: string;
+}
+
