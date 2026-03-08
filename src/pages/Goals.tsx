@@ -197,16 +197,20 @@ export default function Goals() {
                       </div>
                       <div>
                         <p className="text-sm font-semibold">{goal.name}</p>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span
                             className="text-[10px] font-medium px-1.5 py-0.5 rounded-full"
                             style={{ backgroundColor: `${goalColor}15`, color: goalColor }}
                           >
                             {getGoalCategoryInfo(goal.category ?? 'custom').label}
                           </span>
+                          <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
+                            <Clock className="h-2.5 w-2.5" />
+                            {new Date(goal.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          </span>
                           {goal.deadline && (
                             <span className="text-[10px] text-muted-foreground">
-                              by {new Date(goal.deadline).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}
+                              → {new Date(goal.deadline).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}
                             </span>
                           )}
                         </div>
