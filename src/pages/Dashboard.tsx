@@ -119,6 +119,9 @@ export default function Dashboard() {
         <StatCard title="Credit Debt" value={formatCurrency(totalCreditDebt, primaryCurrency)} accent="destructive" />
         <StatCard title="Assets" value={formatCurrency(totalAssetValue, primaryCurrency)} accent="success" />
         <StatCard title="Loans" value={formatCurrency(totalLoanOutstanding, primaryCurrency)} accent="warning" />
+        {totalCashback > 0 && (
+          <StatCard title="Cashback Earned" value={formatCurrency(totalCashback, primaryCurrency)} accent="success" />
+        )}
       </div>
 
       {/* Income vs Expenses Chart */}

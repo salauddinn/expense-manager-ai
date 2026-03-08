@@ -241,6 +241,10 @@ function EditTransactionDialog({
               </SelectContent>
             </Select>
           </div>
+          <div className="space-y-1.5">
+            <Label>Cashback</Label>
+            <Input type="number" value={cashback} onChange={(e) => setCashback(Number(e.target.value))} placeholder="0" />
+          </div>
           <div className="flex gap-2">
             <Button onClick={handleSave} className="flex-1 rounded-xl h-11">Save Changes</Button>
             <Button variant="destructive" onClick={onDelete} className="rounded-xl h-11">

@@ -332,6 +332,7 @@ export function mapLLMResultToIntent(result: LLMParsedResult) {
         category: (data.category as CategoryType) ?? 'other',
         description: (data.description as string) ?? '',
         date: new Date().toISOString(),
+        ...(data.cashback && { cashback: data.cashback as number }),
       },
     };
   }

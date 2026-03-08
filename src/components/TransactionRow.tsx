@@ -49,9 +49,16 @@ export function TransactionRow({
         </div>
       </div>
       <div className="flex items-center gap-2 shrink-0 ml-3">
-        <p className={`text-sm font-bold tabular-nums ${isExpense ? 'text-destructive' : 'text-success'}`}>
-          {isExpense ? '−' : '+'}{formatCurrency(t.amount, displayCurrency)}
-        </p>
+        <div className="text-right">
+          <p className={`text-sm font-bold tabular-nums ${isExpense ? 'text-destructive' : 'text-success'}`}>
+            {isExpense ? '−' : '+'}{formatCurrency(t.amount, displayCurrency)}
+          </p>
+          {t.cashback && t.cashback > 0 && (
+            <p className="text-[10px] font-semibold text-success">
+              ↩ {formatCurrency(t.cashback, displayCurrency)}
+            </p>
+          )}
+        </div>
         {actions}
       </div>
     </div>
