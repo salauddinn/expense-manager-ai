@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useTransactions } from '@/hooks/useTransactions';
 import { formatCurrency, CURRENCIES } from '@/lib/currencies';
-import { getCategoryInfo, CATEGORIES } from '@/lib/categories';
+import { getCategoryInfo, ALL_CATEGORIES as CATEGORIES } from '@/lib/categories';
 import { exportTransactionsCSV } from '@/lib/exportData';
 import { Transaction, CategoryType, TransactionType } from '@/types/finance';
 import { format } from 'date-fns';
