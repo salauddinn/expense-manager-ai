@@ -15,6 +15,8 @@ import Budget from "./pages/Budget";
 import Insights from "./pages/Insights";
 import Goals from "./pages/Goals";
 import Install from "./pages/Install";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsConditions from "./pages/TermsConditions";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -38,6 +40,8 @@ const App = () => (
             <Route path="/insights" element={<Insights />} />
             <Route path="/goals" element={<Goals />} />
             <Route path="/install" element={<Install />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/terms" element={<TermsConditions />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

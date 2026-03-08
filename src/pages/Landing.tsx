@@ -349,7 +349,13 @@ export default function Landing() {
             <span className="text-sm font-bold text-foreground">FinTrack</span>
             <span className="text-xs text-muted-foreground">· Personal Finance, Simplified</span>
           </div>
-          <p className="text-xs text-muted-foreground">
+          <div className="flex items-center gap-4">
+            <Link to="/privacy" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Privacy Policy</Link>
+            <Link to="/terms" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Terms & Conditions</Link>
+          </div>
+        </div>
+        <div className="mx-auto max-w-6xl mt-4 pt-4 border-t border-border/20">
+          <p className="text-xs text-muted-foreground text-center">
             Built with ❤️ · 100% client-side · Your data never leaves your device
           </p>
         </div>
