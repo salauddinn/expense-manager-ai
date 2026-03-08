@@ -70,7 +70,7 @@ const TOOLS = [
         type: 'object',
         properties: {
           name: { type: 'string', description: 'Account name (e.g. SBI Savings)' },
-          type: { type: 'string', enum: ['savings', 'current', 'salary'] },
+          type: { type: 'string', enum: ['savings', 'current', 'salary', 'cash'] },
           balance: { type: 'number' },
           currency: { type: 'string', default: 'INR' },
           message: { type: 'string' },
