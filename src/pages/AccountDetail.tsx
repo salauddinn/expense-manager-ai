@@ -1,12 +1,16 @@
+/**
+ * Account Detail page — shows account/card info + linked transactions.
+ */
+
 import { useParams, Link } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { TransactionRow } from '@/components/TransactionRow';
 import { useBankAccounts } from '@/hooks/useBankAccounts';
 import { useCreditCards } from '@/hooks/useCreditCards';
 import { useTransactions } from '@/hooks/useTransactions';
 import { formatCurrency } from '@/lib/currencies';
-import { Transaction, TransactionType } from '@/types/finance';
 import { ArrowLeft, TrendingUp, TrendingDown, Receipt } from 'lucide-react';
 import { useState, useMemo } from 'react';
 
@@ -26,7 +30,7 @@ export default function AccountDetail() {
   const linkedTransactions = useMemo(() => {
     if (!id) return [];
     return transactions.filter(
-      (t) => t.linkedAccountId === id || t.linkedCardId === id
+      (t) => t.linkedAccountId === id || t.linkedCardId === id,
     );
   }, [transactions, id]);
 
@@ -97,9 +101,9 @@ export default function AccountDetail() {
 
       {/* Stats Row */}
       <div className="grid grid-cols-3 gap-2 mb-5">
-        <StatCard icon={<Receipt className="h-3.5 w-3.5" />} label="Transactions" value={String(stats.count)} />
-        <StatCard icon={<TrendingUp className="h-3.5 w-3.5 text-emerald-500" />} label="Income" value={formatCurrency(stats.income, currency)} />
-        <StatCard icon={<TrendingDown className="h-3.5 w-3.5 text-destructive" />} label="Spent" value={formatCurrency(stats.expense, currency)} />
+        <MiniStat icon={<Receipt className="h-3.5 w-3.5" />} label="Transactions" value={String(stats.count)} />
+        <MiniStat icon={<TrendingUp className="h-3.5 w-3.5 text-success" />} label="Income" value={formatCurrency(stats.income, currency)} />
+        <MiniStat icon={<TrendingDown className="h-3.5 w-3.5 text-destructive" />} label="Spent" value={formatCurrency(stats.expense, currency)} />
       </div>
 
       {/* Filter Pills */}
@@ -129,7 +133,7 @@ export default function AccountDetail() {
           <CardContent className="py-1 px-4">
             <div className="divide-y divide-border">
               {filtered.map((t) => (
-                <TransactionRow key={t.id} transaction={t} currency={currency} />
+                <TransactionRow key={t.id} transaction={t} currency={currency} showIcon={false} />
               ))}
             </div>
           </CardContent>
@@ -139,7 +143,7 @@ export default function AccountDetail() {
   );
 }
 
-function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+function MiniStat({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
     <Card>
       <CardContent className="py-3 px-3 text-center">
@@ -148,20 +152,5 @@ function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string
         <p className="text-[10px] text-muted-foreground">{label}</p>
       </CardContent>
     </Card>
-  );
-}
-
-function TransactionRow({ transaction: t, currency }: { transaction: Transaction; currency: string }) {
-  const isExpense = t.type === 'expense';
-  return (
-    <div className="flex items-center justify-between py-3">
-      <div>
-        <p className="text-sm font-medium">{t.description || t.category}</p>
-        <p className="text-[11px] text-muted-foreground capitalize">{t.category} · {t.date}</p>
-      </div>
-      <p className={`text-sm font-medium tabular-nums ${isExpense ? 'text-destructive' : 'text-emerald-600 dark:text-emerald-400'}`}>
-        {isExpense ? '-' : '+'}{formatCurrency(t.amount, currency)}
-      </p>
-    </div>
   );
 }

@@ -1,3 +1,7 @@
+/**
+ * Transactions page — list, search, filter, edit, and export transactions.
+ */
+
 import { useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent } from '@/components/ui/card';
@@ -6,12 +10,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { TransactionRow } from '@/components/TransactionRow';
 import { useTransactions } from '@/hooks/useTransactions';
 import { formatCurrency, CURRENCIES } from '@/lib/currencies';
-import { getCategoryInfo, ALL_CATEGORIES as CATEGORIES } from '@/lib/categories';
+import { ALL_CATEGORIES as CATEGORIES } from '@/lib/categories';
 import { exportTransactionsCSV } from '@/lib/exportData';
 import { Transaction, CategoryType, TransactionType } from '@/types/finance';
-import { format } from 'date-fns';
 import { Trash2, Search, Download, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -25,7 +29,8 @@ export default function Transactions() {
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
 
   const filtered = transactions.filter((t) => {
-    const matchesSearch = t.description.toLowerCase().includes(search.toLowerCase()) ||
+    const matchesSearch =
+      t.description.toLowerCase().includes(search.toLowerCase()) ||
       t.category.toLowerCase().includes(search.toLowerCase());
     const matchesType = typeFilter === 'all' || t.type === typeFilter;
     return matchesSearch && matchesType;
@@ -75,7 +80,7 @@ export default function Transactions() {
               'px-4 py-1.5 text-xs font-semibold rounded-full transition-all capitalize',
               typeFilter === f
                 ? 'bg-primary text-primary-foreground shadow-md shadow-primary/25'
-                : 'bg-card text-muted-foreground hover:text-foreground border border-border'
+                : 'bg-card text-muted-foreground hover:text-foreground border border-border',
             )}
           >
             {f}
@@ -89,33 +94,18 @@ export default function Transactions() {
         <Card>
           <CardContent className="py-1 px-4">
             <div className="divide-y divide-border">
-              {filtered.map((t) => {
-                const cat = getCategoryInfo(t.category);
-                return (
-                  <div key={t.id} className="group flex items-center justify-between py-3.5">
-                    <div
-                      className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer"
-                      onClick={() => setEditingTransaction(t)}
-                    >
-                      <div className="h-9 w-9 rounded-xl bg-muted flex items-center justify-center text-base shrink-0">
-                        {cat.icon}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold truncate">{t.description}</p>
-                        <p className="text-[11px] text-muted-foreground">
-                          {cat.label} · {format(new Date(t.date), 'dd MMM yyyy')}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0 ml-3">
-                      <p className={`text-sm font-bold tabular-nums ${t.type === 'income' ? 'text-success' : 'text-destructive'}`}>
-                        {t.type === 'income' ? '+' : '−'}{formatCurrency(t.amount, t.currency)}
-                      </p>
+              {filtered.map((t) => (
+                <TransactionRow
+                  key={t.id}
+                  transaction={t}
+                  onClick={() => setEditingTransaction(t)}
+                  actions={
+                    <>
                       <Button
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => setEditingTransaction(t)}
+                        onClick={(e) => { e.stopPropagation(); setEditingTransaction(t); }}
                       >
                         <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
                       </Button>
@@ -123,14 +113,14 @@ export default function Transactions() {
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => handleDelete(t.id)}
+                        onClick={(e) => { e.stopPropagation(); handleDelete(t.id); }}
                       >
                         <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
                       </Button>
-                    </div>
-                  </div>
-                );
-              })}
+                    </>
+                  }
+                />
+              ))}
             </div>
           </CardContent>
         </Card>
@@ -155,6 +145,8 @@ export default function Transactions() {
     </AppLayout>
   );
 }
+
+// ── Edit Dialog ──
 
 function EditTransactionDialog({
   transaction,
@@ -208,9 +200,7 @@ function EditTransactionDialog({
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 {CATEGORIES.map((c) => (
-                  <SelectItem key={c.value} value={c.value}>
-                    {c.icon} {c.label}
-                  </SelectItem>
+                  <SelectItem key={c.value} value={c.value}>{c.icon} {c.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -223,7 +213,11 @@ function EditTransactionDialog({
             <Label>Currency</Label>
             <Select value={currency} onValueChange={setCurrency}>
               <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>{CURRENCIES.map((c) => <SelectItem key={c.code} value={c.code}>{c.symbol} {c.name}</SelectItem>)}</SelectContent>
+              <SelectContent>
+                {CURRENCIES.map((c) => (
+                  <SelectItem key={c.code} value={c.code}>{c.symbol} {c.name}</SelectItem>
+                ))}
+              </SelectContent>
             </Select>
           </div>
           <div className="flex gap-2">

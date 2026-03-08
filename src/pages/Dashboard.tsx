@@ -1,17 +1,17 @@
 /**
- * Dashboard — Financial overview with glass hero, accent cards, chart, transactions.
+ * Dashboard — Financial overview with net worth, stats, chart, and recent transactions.
  */
 
 import { useMemo } from 'react';
 import { AlertsBanner } from '@/components/AlertsBanner';
 import { Card, CardContent } from '@/components/ui/card';
+import { TransactionRow } from '@/components/TransactionRow';
 import { useTransactions } from '@/hooks/useTransactions';
 import { useBankAccounts } from '@/hooks/useBankAccounts';
 import { useCreditCards } from '@/hooks/useCreditCards';
 import { useLoans } from '@/hooks/useLoans';
 import { useAssets } from '@/hooks/useAssets';
 import { formatCurrency } from '@/lib/currencies';
-import { getCategoryInfo } from '@/lib/categories';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from 'recharts';
@@ -95,32 +95,12 @@ export default function Dashboard() {
         </CardContent>
       </Card>
 
-      {/* Quick Stats — Accent bordered cards */}
+      {/* Quick Stats */}
       <div className="grid grid-cols-2 gap-3 mb-6">
-        <Card className="accent-border-primary">
-          <CardContent className="pt-4 pb-3 px-4">
-            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-0.5">Bank Balance</p>
-            <p className="text-xl font-bold tracking-tight text-foreground">{formatCurrency(totalBankBalance, 'INR')}</p>
-          </CardContent>
-        </Card>
-        <Card className="accent-border-destructive">
-          <CardContent className="pt-4 pb-3 px-4">
-            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-0.5">Credit Debt</p>
-            <p className="text-xl font-bold tracking-tight text-destructive">{formatCurrency(totalCreditDebt, 'INR')}</p>
-          </CardContent>
-        </Card>
-        <Card className="accent-border-success">
-          <CardContent className="pt-4 pb-3 px-4">
-            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-0.5">Assets</p>
-            <p className="text-xl font-bold tracking-tight text-foreground">{formatCurrency(totalAssetValue, 'INR')}</p>
-          </CardContent>
-        </Card>
-        <Card className="accent-border-warning">
-          <CardContent className="pt-4 pb-3 px-4">
-            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-0.5">Loans</p>
-            <p className="text-xl font-bold tracking-tight text-foreground">{formatCurrency(totalLoanOutstanding, 'INR')}</p>
-          </CardContent>
-        </Card>
+        <StatCard title="Bank Balance" value={formatCurrency(totalBankBalance, 'INR')} accent="primary" />
+        <StatCard title="Credit Debt" value={formatCurrency(totalCreditDebt, 'INR')} accent="destructive" valueClassName="text-destructive" />
+        <StatCard title="Assets" value={formatCurrency(totalAssetValue, 'INR')} accent="success" />
+        <StatCard title="Loans" value={formatCurrency(totalLoanOutstanding, 'INR')} accent="warning" />
       </div>
 
       {/* Income vs Expenses Chart */}
@@ -188,24 +168,23 @@ export default function Dashboard() {
   );
 }
 
-function TransactionRow({ transaction: t }: { transaction: Transaction }) {
-  const category = getCategoryInfo(t.category);
+function StatCard({
+  title,
+  value,
+  accent,
+  valueClassName,
+}: {
+  title: string;
+  value: string;
+  accent: string;
+  valueClassName?: string;
+}) {
   return (
-    <div className="flex items-center justify-between py-3.5">
-      <div className="flex items-center gap-3">
-        <div className="h-9 w-9 rounded-xl bg-muted flex items-center justify-center text-base">
-          {category.icon}
-        </div>
-        <div>
-          <p className="text-sm font-semibold line-clamp-1">{t.description}</p>
-          <p className="text-[11px] text-muted-foreground">
-            {format(new Date(t.date), 'dd MMM yyyy')}
-          </p>
-        </div>
-      </div>
-      <p className={`text-sm font-bold tabular-nums ${t.type === 'income' ? 'text-success' : 'text-destructive'}`}>
-        {t.type === 'income' ? '+' : '−'}{formatCurrency(t.amount, t.currency)}
-      </p>
-    </div>
+    <Card className={`accent-border-${accent}`}>
+      <CardContent className="pt-4 pb-3 px-4">
+        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-0.5">{title}</p>
+        <p className={`text-xl font-bold tracking-tight ${valueClassName ?? 'text-foreground'}`}>{value}</p>
+      </CardContent>
+    </Card>
   );
 }
