@@ -534,7 +534,7 @@ export default function Chat() {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={isLLMConfigured ? 'Ask anything about your finances...' : 'Try: spent ₹500 on groceries...'}
-            className="flex-1"
+            className="flex-1 rounded-full px-4"
             disabled={isProcessing}
           />
 
