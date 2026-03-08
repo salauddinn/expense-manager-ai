@@ -107,7 +107,7 @@ function EmptyState({ text }: { text: string }) {
   return <p className="text-sm text-muted-foreground text-center py-4">{text}</p>;
 }
 
-function AddBankDialog({ onAdd }: { onAdd: (a: any) => void }) {
+function AddBankDialog({ onAdd }: { onAdd: (a: Omit<BankAccount, 'id'>) => void }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
   const [type, setType] = useState<'savings' | 'current' | 'salary'>('savings');
