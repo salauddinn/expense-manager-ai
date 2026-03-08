@@ -103,12 +103,39 @@ export default function Chat() {
 
   // Data hooks
   const { transactions, addTransaction } = useTransactions();
-  const { accounts, addAccount } = useBankAccounts();
-  const { cards, addCard } = useCreditCards();
+  const { accounts, addAccount, updateAccount } = useBankAccounts();
+  const { cards, addCard, updateCard } = useCreditCards();
   const { assets, addAsset } = useAssets();
   const { loans, addLoan } = useLoans();
   const { addGoal } = useBudgetGoals();
   const { settings: llmSettings, isConfigured: isLLMConfigured } = useLLMSettings();
+
+  /**
+   * Match a parsed source name (e.g. "hdfc 2427") to an existing account or card.
+   * Returns linked IDs for the transaction.
+   */
+  const resolveLinkedSource = useCallback(
+    (sourceName?: string, sourceIsCard?: boolean): { linkedAccountId?: string; linkedCardId?: string } => {
+      if (!sourceName) return {};
+      const lower = sourceName.toLowerCase();
+
+      if (sourceIsCard) {
+        const match = cards.find((c) => c.name.toLowerCase().includes(lower) || lower.includes(c.name.toLowerCase()));
+        return match ? { linkedCardId: match.id } : {};
+      }
+
+      // Try bank accounts first
+      const accountMatch = accounts.find((a) => a.name.toLowerCase().includes(lower) || lower.includes(a.name.toLowerCase()));
+      if (accountMatch) return { linkedAccountId: accountMatch.id };
+
+      // Fallback: try cards too (user might say "from hdfc" meaning card)
+      const cardMatch = cards.find((c) => c.name.toLowerCase().includes(lower) || lower.includes(c.name.toLowerCase()));
+      if (cardMatch) return { linkedCardId: cardMatch.id };
+
+      return {};
+    },
+    [accounts, cards],
+  );
 
   // Refs
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -193,8 +220,9 @@ export default function Chat() {
       switch (parsed.intent) {
         case 'transaction': {
           const d = parsed.data;
+          const sourceText = d.sourceName ? ` from **${d.sourceName}**` : '';
           return {
-            content: `I detected a **${d.type}** of **${formatCurrency(d.amount, d.currency)}** in category **${getCategoryInfo(d.category).label}**. Shall I save this?`,
+            content: `I detected a **${d.type}** of **${formatCurrency(d.amount, d.currency)}** in category **${getCategoryInfo(d.category).label}**${sourceText}. Shall I save this?`,
             parsedIntent: { intent: 'transaction', data: { ...d, receiptUrl: imageUrl } },
           };
         }
@@ -396,8 +424,21 @@ export default function Chat() {
 
       switch (intent.intent) {
         case 'transaction': {
-          const { type, amount, currency, category, description, date, receiptUrl } = intent.data;
-          addTransaction({ type, amount, currency, category, description, date, receiptUrl });
+          const { type, amount, currency, category, description, date, receiptUrl, sourceName, sourceIsCard } = intent.data as any;
+          const linkedIds = resolveLinkedSource(sourceName, sourceIsCard);
+          addTransaction({ type, amount, currency, category, description, date, receiptUrl, ...linkedIds });
+
+          // Auto-update linked account/card balance
+          if (linkedIds.linkedAccountId) {
+            const delta = type === 'expense' ? -amount : amount;
+            const account = accounts.find((a) => a.id === linkedIds.linkedAccountId);
+            if (account) updateAccount(account.id, { balance: account.balance + delta });
+          }
+          if (linkedIds.linkedCardId) {
+            const delta = type === 'expense' ? amount : -amount;
+            const card = cards.find((c) => c.id === linkedIds.linkedCardId);
+            if (card) updateCard(card.id, { outstanding: Math.max(0, card.outstanding + delta) });
+          }
           break;
         }
         case 'bank_account':
@@ -427,7 +468,7 @@ export default function Chat() {
       );
       toast.success(successMsg.replace('✅ ', ''));
     },
-    [addTransaction, addAccount, addCard, addAsset, addLoan, addGoal, setMessages],
+    [addTransaction, addAccount, addCard, addAsset, addLoan, addGoal, accounts, cards, updateAccount, updateCard, resolveLinkedSource, setMessages],
   );
 
   const handleReject = useCallback(
