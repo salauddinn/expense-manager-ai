@@ -72,14 +72,10 @@ export default function Dashboard() {
         <p className="text-sm text-muted-foreground mt-0.5">{format(new Date(), 'EEEE, d MMMM')}</p>
       </div>
 
-      {/* Net Worth — Glass Card with Gradient Blob */}
-      <div className="glass-card rounded-2xl p-5 mb-6">
-        {/* Gradient blobs */}
-        <div className="gradient-blob w-32 h-32 -top-10 -left-10 bg-[hsl(230,75%,58%)]" />
-        <div className="gradient-blob w-24 h-24 -bottom-8 -right-6 bg-[hsl(280,70%,55%)]" />
-        
-        <div className="relative z-10">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Net Worth</p>
+      {/* Net Worth — Flat card with accent bar */}
+      <Card className="mb-6 accent-border-primary border-l-4">
+        <CardContent className="py-5 px-5">
+          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Net Worth</p>
           <p className={`text-4xl font-extrabold tracking-tight ${netWorth >= 0 ? 'text-foreground' : 'text-destructive'}`}>
             {netWorth < 0 && '−'}{formatCurrency(Math.abs(netWorth), 'INR')}
           </p>
@@ -93,8 +89,8 @@ export default function Dashboard() {
               {netWorth >= 0 ? 'Looking good' : 'Negative net worth'}
             </span>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Quick Stats — Accent bordered cards */}
       <div className="grid grid-cols-2 gap-3 mb-6">
