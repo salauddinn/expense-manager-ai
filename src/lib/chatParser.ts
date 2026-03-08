@@ -358,6 +358,7 @@ type IntentType = keyof typeof INTENT_KEYWORDS | 'transaction';
 const TRANSACTION_OVERRIDES = [
   'credit card bill', 'card bill', 'card payment', 'card due',
   'emi', 'loan emi', 'loan payment',
+  'cashback',
 ];
 
 /** Determine the user's intent from their message. */
