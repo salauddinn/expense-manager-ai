@@ -1,18 +1,21 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { useBudgetGoals } from '@/hooks/useBudgetGoals';
 import { useTransactions } from '@/hooks/useTransactions';
 import { EXPENSE_CATEGORIES, getCategoryInfo } from '@/lib/categories';
 import { formatCurrency } from '@/lib/currencies';
 import { CategoryType } from '@/types/finance';
 import { startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
-import { Plus, Trash2, Target } from 'lucide-react';
+import { Plus, Trash2, Target, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
+import { useMemo } from 'react';
 
 export default function Budget() {
   const { goals, addGoal, deleteGoal } = useBudgetGoals();
@@ -96,7 +99,12 @@ export default function Budget() {
             <Target className="h-8 w-8 opacity-40" strokeWidth={1.5} />
           </div>
           <p className="text-sm font-medium">No budget goals yet</p>
-          <p className="text-xs mt-1 text-muted-foreground/70">Track your spending by category</p>
+          <p className="text-xs mt-1 mb-4 text-muted-foreground/70">Track your spending by category</p>
+          <Link to="/chat">
+            <Button size="sm" variant="outline" className="gap-1.5 rounded-full">
+              <MessageSquare className="h-3.5 w-3.5" /> Set via Chat
+            </Button>
+          </Link>
         </div>
       ) : (
         <div className="space-y-3">
@@ -116,9 +124,17 @@ export default function Budget() {
                       </div>
                       <span className="text-sm font-semibold">{cat.label}</span>
                     </div>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => { deleteGoal(goal.id); toast.success('Goal removed'); }}>
-                      <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
-                    </Button>
+                    <ConfirmDialog
+                      trigger={
+                        <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
+                        </Button>
+                      }
+                      title={`Remove ${cat.label} budget?`}
+                      description="This will stop tracking spending against this budget limit."
+                      confirmLabel="Remove"
+                      onConfirm={() => { deleteGoal(goal.id); toast.success('Goal removed'); }}
+                    />
                   </div>
                   <Progress value={percentage} className={`h-2 rounded-full mb-2 ${isOver ? '[&>div]:bg-destructive' : '[&>div]:bg-primary'}`} />
                   <div className="flex justify-between text-[11px] text-muted-foreground">

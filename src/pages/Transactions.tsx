@@ -10,13 +10,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { TransactionRow } from '@/components/TransactionRow';
 import { useTransactions } from '@/hooks/useTransactions';
 import { formatCurrency, CURRENCIES } from '@/lib/currencies';
 import { ALL_CATEGORIES as CATEGORIES } from '@/lib/categories';
 import { exportTransactionsCSV } from '@/lib/exportData';
 import { Transaction, CategoryType, TransactionType } from '@/types/finance';
-import { Trash2, Search, Download, Pencil } from 'lucide-react';
+import { Trash2, Search, Download, Pencil, MessageSquare } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -89,7 +91,18 @@ export default function Transactions() {
       </div>
 
       {filtered.length === 0 ? (
-        <p className="text-center text-muted-foreground py-16 text-sm">No transactions found.</p>
+        <div className="text-center py-16">
+          <p className="text-muted-foreground text-sm mb-3">
+            {transactions.length === 0 ? 'No transactions yet' : 'No transactions found'}
+          </p>
+          {transactions.length === 0 && (
+            <Link to="/chat">
+              <Button size="sm" variant="outline" className="gap-1.5 rounded-full">
+                <MessageSquare className="h-3.5 w-3.5" /> Add via Chat
+              </Button>
+            </Link>
+          )}
+        </div>
       ) : (
         <Card>
           <CardContent className="py-1 px-4">
@@ -109,14 +122,21 @@ export default function Transactions() {
                       >
                         <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={(e) => { e.stopPropagation(); handleDelete(t.id); }}
-                      >
-                        <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
-                      </Button>
+                      <ConfirmDialog
+                        trigger={
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
+                          </Button>
+                        }
+                        title="Delete transaction?"
+                        description={`"${t.description}" — ${formatCurrency(t.amount, t.currency)}`}
+                        onConfirm={() => handleDelete(t.id)}
+                      />
                     </>
                   }
                 />
