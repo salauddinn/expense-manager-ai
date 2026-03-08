@@ -185,6 +185,7 @@ function EditTransactionDialog({
   const [category, setCategory] = useState<CategoryType>(transaction.category);
   const [date, setDate] = useState(transaction.date.slice(0, 10));
   const [currency, setCurrency] = useState(transaction.currency);
+  const [cashback, setCashback] = useState(transaction.cashback ?? 0);
 
   const handleSave = () => {
     if (!description.trim()) return;
