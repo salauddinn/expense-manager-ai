@@ -14,7 +14,7 @@ import { useFinancialGoals, GOAL_CATEGORIES, getGoalCategoryInfo } from '@/hooks
 import { useTransactions } from '@/hooks/useTransactions';
 import { formatCurrency } from '@/lib/currencies';
 import { GoalCategory } from '@/types/finance';
-import { Plus, Trash2, Target, TrendingUp, MessageSquare, Link2 } from 'lucide-react';
+import { Plus, Trash2, Target, TrendingUp, MessageSquare, Link2, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function Goals() {
@@ -78,7 +78,7 @@ export default function Goals() {
     const goal = goals.find((g) => g.id === goalId);
     if (!tx || !goal) return;
 
-    const { newMilestones } = linkTransaction(goalId, txId, tx.amount);
+    const { newMilestones } = linkTransaction(goalId, txId, tx.amount, tx.description);
     toast.success(`Linked "${tx.description}" — ${formatCurrency(tx.amount, tx.currency)} added`);
     if (newMilestones.length > 0) {
       celebrate(newMilestones, goal.name);
@@ -197,16 +197,20 @@ export default function Goals() {
                       </div>
                       <div>
                         <p className="text-sm font-semibold">{goal.name}</p>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span
                             className="text-[10px] font-medium px-1.5 py-0.5 rounded-full"
                             style={{ backgroundColor: `${goalColor}15`, color: goalColor }}
                           >
                             {getGoalCategoryInfo(goal.category ?? 'custom').label}
                           </span>
+                          <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
+                            <Clock className="h-2.5 w-2.5" />
+                            {new Date(goal.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          </span>
                           {goal.deadline && (
                             <span className="text-[10px] text-muted-foreground">
-                              by {new Date(goal.deadline).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}
+                              → {new Date(goal.deadline).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}
                             </span>
                           )}
                         </div>
@@ -267,6 +271,34 @@ export default function Goals() {
                       {Math.round(pct)}%
                     </span>
                   </div>
+
+                  {/* Recent contributions */}
+                  {(goal.contributions ?? []).length > 0 && (
+                    <div className="mt-2 space-y-1">
+                      <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Recent activity</p>
+                      {(goal.contributions ?? [])
+                        .slice(-5)
+                        .reverse()
+                        .map((c) => (
+                          <div key={c.id} className="flex items-center justify-between text-[11px] px-2 py-1 rounded-lg bg-muted/40">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span>{c.source === 'manual' ? '✋' : '🔗'}</span>
+                              <span className="text-muted-foreground truncate">
+                                {c.source === 'transaction' && c.label ? c.label : 'Manual'}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="font-semibold" style={{ color: goalColor }}>
+                                +{formatCurrency(c.amount, goal.currency)}
+                              </span>
+                              <span className="text-[10px] text-muted-foreground">
+                                {new Date(c.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  )}
 
                   {/* Actions */}
                   {!isComplete && (

@@ -1,5 +1,5 @@
 import { useLocalStorage } from './useLocalStorage';
-import { FinancialGoal, GoalCategory } from '@/types/finance';
+import { FinancialGoal, GoalCategory, GoalContribution } from '@/types/finance';
 import { useCallback } from 'react';
 import { logger } from '@/lib/logger';
 import { analytics } from '@/lib/analytics';
@@ -51,6 +51,13 @@ export function useFinancialGoals() {
         const freshMilestones = MILESTONES.filter((m) => pct >= m && !celebrated.includes(m));
         newMilestones = freshMilestones;
 
+        const entry: GoalContribution = {
+          id: crypto.randomUUID(),
+          amount,
+          date: new Date().toISOString(),
+          source: 'manual',
+        };
+
         logger.info('[Goals] Contribution added', { id, amount, newPct: Math.round(pct) });
         if (freshMilestones.length > 0) {
           analytics.track('goal_milestone', { id, milestones: freshMilestones.join(',') });
@@ -59,6 +66,7 @@ export function useFinancialGoals() {
         return {
           ...g,
           currentAmount: newAmount,
+          contributions: [...(g.contributions ?? []), entry],
           celebratedMilestones: [...celebrated, ...freshMilestones],
         };
       })
@@ -67,15 +75,14 @@ export function useFinancialGoals() {
     return { newMilestones };
   }, [setGoals]);
 
-  /** Link a transaction to a goal and auto-add its amount as a contribution */
-  const linkTransaction = useCallback((goalId: string, transactionId: string, amount: number): { newMilestones: number[] } => {
+  const linkTransaction = useCallback((goalId: string, transactionId: string, amount: number, label?: string): { newMilestones: number[] } => {
     let newMilestones: number[] = [];
 
     setGoals((prev) =>
       prev.map((g) => {
         if (g.id !== goalId) return g;
         const linked = g.linkedTransactionIds ?? [];
-        if (linked.includes(transactionId)) return g; // Already linked
+        if (linked.includes(transactionId)) return g;
 
         const newAmount = Math.min(g.currentAmount + amount, g.targetAmount);
         const pct = (newAmount / g.targetAmount) * 100;
@@ -83,12 +90,21 @@ export function useFinancialGoals() {
         const freshMilestones = MILESTONES.filter((m) => pct >= m && !celebrated.includes(m));
         newMilestones = freshMilestones;
 
+        const entry: GoalContribution = {
+          id: crypto.randomUUID(),
+          amount,
+          date: new Date().toISOString(),
+          source: 'transaction',
+          label,
+        };
+
         logger.info('[Goals] Transaction linked', { goalId, transactionId, amount });
 
         return {
           ...g,
           currentAmount: newAmount,
           linkedTransactionIds: [...linked, transactionId],
+          contributions: [...(g.contributions ?? []), entry],
           celebratedMilestones: [...celebrated, ...freshMilestones],
         };
       })
