@@ -37,7 +37,7 @@ export class ErrorBoundary extends Component<Props, State> {
             <Button
               onClick={() => {
                 this.setState({ hasError: false, error: null });
-                window.location.href = '/';
+                window.location.href = '/dashboard';
               }}
               className="rounded-full px-6"
             >

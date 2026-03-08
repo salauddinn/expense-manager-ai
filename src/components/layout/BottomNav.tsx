@@ -3,7 +3,7 @@ import { LayoutDashboard, MessageSquare, PieChart, Target, Wallet } from 'lucide
 import { cn } from '@/lib/utils';
 
 const NAV_ITEMS = [
-  { to: '/', label: 'Home', icon: LayoutDashboard },
+  { to: '/dashboard', label: 'Home', icon: LayoutDashboard },
   { to: '/chat', label: 'Chat', icon: MessageSquare },
   { to: '/insights', label: 'Insights', icon: PieChart },
   { to: '/goals', label: 'Goals', icon: Target },
