@@ -44,7 +44,7 @@ export interface ParsedTransaction {
 
 export interface ParsedBankAccount {
   name: string;
-  type: 'savings' | 'current' | 'salary';
+  type: 'savings' | 'current' | 'salary' | 'cash';
   balance: number;
   currency: string;
 }
