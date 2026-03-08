@@ -60,7 +60,7 @@ export function LLMSettingsDialog() {
         >
           <Settings className="h-4 w-4" />
           {isConfigured && (
-            <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-500 border-2 border-card" />
+            <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-success border-2 border-card" />
           )}
         </Button>
       </DialogTrigger>

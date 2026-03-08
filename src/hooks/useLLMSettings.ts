@@ -41,13 +41,13 @@ export function useLLMSettings() {
 
   const isConfigured = !!settings.apiKey.trim();
 
-  const updateSettings = (updates: Partial<LLMSettings>) => {
+  const updateSettings = useCallback((updates: Partial<LLMSettings>) => {
     setSettings((prev) => ({ ...prev, ...updates }));
-  };
+  }, [setSettings]);
 
-  const clearApiKey = () => {
+  const clearApiKey = useCallback(() => {
     setSettings((prev) => ({ ...prev, apiKey: '' }));
-  };
+  }, [setSettings]);
 
   return { settings, isConfigured, updateSettings, clearApiKey };
 }

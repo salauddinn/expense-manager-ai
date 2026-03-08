@@ -7,8 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { calculateEMI, generateAmortization } from '@/lib/loanCalculator';
-import { formatCurrency } from '@/lib/currencies';
-import { CURRENCIES } from '@/lib/currencies';
+import { formatCurrency, CURRENCIES } from '@/lib/currencies';
 
 export default function LoanCalculator() {
   const [principal, setPrincipal] = useState(5000000);
