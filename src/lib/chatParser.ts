@@ -178,6 +178,7 @@ const INTENT_KEYWORDS = {
   ],
   bank_account: [
     'bank account', 'savings account', 'current account', 'salary account',
+    'cash account', 'cash wallet', 'cash in hand',
     'add account', 'bank balance', 'open account',
   ],
   credit_card: [
