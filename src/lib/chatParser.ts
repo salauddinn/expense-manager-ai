@@ -537,6 +537,27 @@ function parseQuery(lower: string): ParsedQuery {
   };
 }
 
+/**
+ * Extract a linked payment source from "from [name] [last4]" pattern.
+ * Examples: "from hdfc 2427", "from sbi", "from icici card"
+ */
+function extractSource(lower: string): { sourceName: string; sourceIsCard: boolean } | null {
+  const sourceMatch = lower.match(/(?:from|using|via|with)\s+([a-z\s]+?)(?:\s+(\d{4}))?\s*$/);
+  if (!sourceMatch) return null;
+
+  const rawName = sourceMatch[1].trim();
+  const last4 = sourceMatch[2] ?? '';
+
+  // Check if it's a credit card
+  const isCard = CARD_ISSUERS.some((c) => rawName.includes(c)) &&
+    (rawName.includes('card') || rawName.includes('credit') || !BANK_NAMES.some((b) => rawName.includes(b)));
+
+  // Build a readable source name for matching
+  const sourceName = [rawName, last4].filter(Boolean).join(' ').trim();
+
+  return { sourceName, sourceIsCard: isCard };
+}
+
 function parseTransaction(
   message: string,
   lower: string,
@@ -548,6 +569,8 @@ function parseTransaction(
   const { amount, currency } = extractAmount(message);
   if (!amount) return null;
 
+  const source = extractSource(lower);
+
   return {
     type,
     amount,
@@ -555,6 +578,7 @@ function parseTransaction(
     category: detectCategory(lower),
     description: message,
     date: detectDate(lower),
+    ...(source && { sourceName: source.sourceName, sourceIsCard: source.sourceIsCard }),
   };
 }
 
