@@ -215,7 +215,7 @@ export default function Goals() {
                             </span>
                           )}
                         </div>
-                      </div>
+                      </Link>
                     </div>
                     <ConfirmDialog
                       trigger={
