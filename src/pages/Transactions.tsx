@@ -12,12 +12,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { TransactionRow } from '@/components/TransactionRow';
+import { AddTransactionDialog } from '@/components/AddTransactionDialog';
 import { useTransactions } from '@/hooks/useTransactions';
 import { formatCurrency, CURRENCIES } from '@/lib/currencies';
 import { ALL_CATEGORIES as CATEGORIES } from '@/lib/categories';
 import { exportTransactionsCSV } from '@/lib/exportData';
 import { Transaction, CategoryType, TransactionType } from '@/types/finance';
-import { Trash2, Search, Download, Pencil, MessageSquare } from 'lucide-react';
+import { Trash2, Search, Download, Pencil, MessageSquare, Plus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -25,7 +26,7 @@ import { cn } from '@/lib/utils';
 const FILTERS = ['all', 'income', 'expense'] as const;
 
 export default function Transactions() {
-  const { transactions, deleteTransaction, updateTransaction } = useTransactions();
+  const { transactions, deleteTransaction, updateTransaction, addTransaction } = useTransactions();
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
@@ -56,9 +57,12 @@ export default function Transactions() {
     <AppLayout>
       <div className="flex items-center justify-between mb-5">
         <h1 className="text-xl font-bold text-foreground tracking-tight">Transactions</h1>
-        <Button variant="ghost" size="sm" onClick={handleExport} className="gap-1.5 text-muted-foreground hover:text-foreground text-xs">
-          <Download className="h-3.5 w-3.5" /> Export
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" onClick={handleExport} className="gap-1.5 text-muted-foreground hover:text-foreground text-xs">
+            <Download className="h-3.5 w-3.5" /> Export
+          </Button>
+          <AddTransactionDialog onAdd={addTransaction} />
+        </div>
       </div>
 
       {/* Search */}
