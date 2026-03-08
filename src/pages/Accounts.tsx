@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Section, EmptyState } from '@/components/shared/Section';
 import { useBankAccounts } from '@/hooks/useBankAccounts';
 import { useCreditCards } from '@/hooks/useCreditCards';
 import { useAssets } from '@/hooks/useAssets';
@@ -135,17 +136,4 @@ function QuickLink({ to, icon, label }: { to: string; icon: React.ReactNode; lab
       <ChevronRight className="h-4 w-4 text-muted-foreground" />
     </Link>
   );
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="mb-6">
-      <h2 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-3">{title}</h2>
-      <div className="space-y-2">{children}</div>
-    </div>
-  );
-}
-
-function EmptyState({ text }: { text: string }) {
-  return <p className="text-sm text-muted-foreground text-center py-6">{text}</p>;
 }
