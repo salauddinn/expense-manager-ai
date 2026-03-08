@@ -102,7 +102,7 @@ export default function Dashboard() {
           value={formatCurrency(totalCreditDebt, 'INR')}
         />
         <StatCard
-          icon={<PiggyBank className="h-4 w-4 text-emerald-600" />}
+          icon={<PiggyBank className="h-4 w-4 text-success" />}
           label="Assets"
           value={formatCurrency(totalAssetValue, 'INR')}
         />
