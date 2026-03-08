@@ -110,7 +110,7 @@ export default function Accounts() {
                     </div>
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-medium tabular-nums text-success">{formatCurrency(a.value, a.currency)}</p>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => { deleteAsset(a.id); toast.success('Deleted'); }}>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => { e.stopPropagation(); deleteAsset(a.id); toast.success('Deleted'); }}>
                         <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
                       </Button>
                     </div>
