@@ -590,15 +590,14 @@ function MessageBubble({ message, showActions, onConfirm, onReject }: MessageBub
 
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
-      <div className="max-w-[85%]">
-        <Card
-          className={
+      <div className="max-w-[80%]">
+        <div
+          className={`rounded-2xl px-4 py-3 ${
             isUser
-              ? 'bg-primary text-primary-foreground border-primary'
-              : 'bg-card border-border'
-          }
+              ? 'bg-foreground text-background'
+              : 'bg-card border border-border'
+          }`}
         >
-          <CardContent className="py-3 px-4">
             {message.imageUrl && (
               <img
                 src={message.imageUrl}
