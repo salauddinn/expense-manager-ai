@@ -28,6 +28,8 @@ import {
   HELP_TEXT, EmptyState, MessageBubble,
 } from '@/components/ChatComponents';
 import { Send, ImagePlus, Sparkles, Loader2, Trash2 } from 'lucide-react';
+import { logger } from '@/lib/logger';
+import { analytics } from '@/lib/analytics';
 import { toast } from 'sonner';
 
 export default function Chat() {
