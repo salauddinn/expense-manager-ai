@@ -350,8 +350,19 @@ function detectCategory(text: string): CategoryType {
 
 type IntentType = keyof typeof INTENT_KEYWORDS | 'transaction';
 
+/** Phrases that look like an intent keyword but are actually transactions. */
+const TRANSACTION_OVERRIDES = [
+  'credit card bill', 'card bill', 'card payment', 'card due',
+  'emi', 'loan emi', 'loan payment',
+];
+
 /** Determine the user's intent from their message. */
 function detectIntent(text: string): IntentType {
+  // Check transaction overrides first — these trump intent keywords
+  if (TRANSACTION_OVERRIDES.some((kw) => text.includes(kw))) {
+    return 'transaction';
+  }
+
   for (const [intent, keywords] of Object.entries(INTENT_KEYWORDS)) {
     if (keywords.some((kw) => text.includes(kw))) {
       return intent as IntentType;
