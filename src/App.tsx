@@ -27,6 +27,7 @@ const App = () => (
           <Route path="/loan-calculator" element={<LoanCalculator />} />
           <Route path="/accounts" element={<Accounts />} />
           <Route path="/budget" element={<Budget />} />
+          <Route path="/install" element={<Install />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
