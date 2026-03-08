@@ -103,12 +103,39 @@ export default function Chat() {
 
   // Data hooks
   const { transactions, addTransaction } = useTransactions();
-  const { accounts, addAccount } = useBankAccounts();
-  const { cards, addCard } = useCreditCards();
+  const { accounts, addAccount, updateAccount } = useBankAccounts();
+  const { cards, addCard, updateCard } = useCreditCards();
   const { assets, addAsset } = useAssets();
   const { loans, addLoan } = useLoans();
   const { addGoal } = useBudgetGoals();
   const { settings: llmSettings, isConfigured: isLLMConfigured } = useLLMSettings();
+
+  /**
+   * Match a parsed source name (e.g. "hdfc 2427") to an existing account or card.
+   * Returns linked IDs for the transaction.
+   */
+  const resolveLinkedSource = useCallback(
+    (sourceName?: string, sourceIsCard?: boolean): { linkedAccountId?: string; linkedCardId?: string } => {
+      if (!sourceName) return {};
+      const lower = sourceName.toLowerCase();
+
+      if (sourceIsCard) {
+        const match = cards.find((c) => c.name.toLowerCase().includes(lower) || lower.includes(c.name.toLowerCase()));
+        return match ? { linkedCardId: match.id } : {};
+      }
+
+      // Try bank accounts first
+      const accountMatch = accounts.find((a) => a.name.toLowerCase().includes(lower) || lower.includes(a.name.toLowerCase()));
+      if (accountMatch) return { linkedAccountId: accountMatch.id };
+
+      // Fallback: try cards too (user might say "from hdfc" meaning card)
+      const cardMatch = cards.find((c) => c.name.toLowerCase().includes(lower) || lower.includes(c.name.toLowerCase()));
+      if (cardMatch) return { linkedCardId: cardMatch.id };
+
+      return {};
+    },
+    [accounts, cards],
+  );
 
   // Refs
   const bottomRef = useRef<HTMLDivElement>(null);
