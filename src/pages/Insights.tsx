@@ -115,7 +115,7 @@ export default function Insights() {
                       </ResponsiveContainer>
                     </div>
                     <div className="text-center mb-4">
-                      <p className="text-2xl font-bold">{formatCurrency(totalSpent, 'INR')}</p>
+                      <p className="text-2xl font-bold">{formatCurrency(totalSpent, transactions[0]?.currency ?? 'INR')}</p>
                       <p className="text-[11px] text-muted-foreground">total spent this month</p>
                     </div>
                     <div className="space-y-2">

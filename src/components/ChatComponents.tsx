@@ -121,7 +121,16 @@ export function MessageBubble({ message, showActions, onConfirm, onReject }: Mes
               <span>Thinking...</span>
             </div>
           ) : (
-            <p className="text-sm whitespace-pre-wrap leading-relaxed">{message.content}</p>
+            <p
+              className="text-sm whitespace-pre-wrap leading-relaxed"
+              dangerouslySetInnerHTML={{
+                __html: message.content
+                  .replace(/&/g, '&amp;')
+                  .replace(/</g, '&lt;')
+                  .replace(/>/g, '&gt;')
+                  .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>'),
+              }}
+            />
           )}
 
           {showActions && (
