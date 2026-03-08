@@ -55,6 +55,7 @@ const TOOLS = [
             enum: ['food', 'transport', 'shopping', 'bills', 'entertainment', 'health', 'education', 'rent', 'groceries', 'travel', 'salary', 'freelance', 'investment', 'gift', 'refund', 'other'],
           },
           description: { type: 'string', description: 'Brief description of the transaction' },
+          cashback: { type: 'number', description: 'Cashback amount received on this transaction, if mentioned' },
           message: { type: 'string', description: 'Friendly confirmation message to show the user' },
         },
         required: ['type', 'amount', 'currency', 'category', 'description', 'message'],
