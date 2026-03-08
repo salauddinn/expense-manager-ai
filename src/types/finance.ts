@@ -73,14 +73,3 @@ export interface BudgetGoal {
   currency: string;
 }
 
-// ── Chat ──
-
-export interface ChatMessage {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: string;
-  parsedTransaction?: Partial<Transaction>;
-  confirmed?: boolean;
-  imageUrl?: string;
-}

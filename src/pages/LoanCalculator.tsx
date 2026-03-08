@@ -74,12 +74,13 @@ export default function LoanCalculator() {
         </Card>
       </div>
 
-      <button
+      <Button
+        variant="link"
         onClick={() => setShowTable(!showTable)}
-        className="text-sm text-primary underline underline-offset-4 mb-4 block"
+        className="px-0 mb-4"
       >
         {showTable ? 'Hide' : 'Show'} Amortization Schedule
-      </button>
+      </Button>
 
       {showTable && (
         <Card>

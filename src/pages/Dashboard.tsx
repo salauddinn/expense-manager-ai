@@ -211,7 +211,7 @@ function TransactionRow({ transaction: t }: { transaction: Transaction }) {
       </div>
       <p
         className={`text-sm font-semibold ${
-          t.type === 'income' ? 'text-emerald-600' : 'text-destructive'
+          t.type === 'income' ? 'text-success' : 'text-destructive'
         }`}
       >
         {t.type === 'income' ? '+' : '-'}
