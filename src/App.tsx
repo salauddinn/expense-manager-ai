@@ -14,6 +14,7 @@ import AccountDetail from "./pages/AccountDetail";
 import Budget from "./pages/Budget";
 import Insights from "./pages/Insights";
 import Goals from "./pages/Goals";
+import GoalDetail from "./pages/GoalDetail";
 import Install from "./pages/Install";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsConditions from "./pages/TermsConditions";
