@@ -474,18 +474,18 @@ export default function Chat() {
 
   return (
     <AppLayout>
-      <div className="flex items-center gap-2 mb-2">
-        <h1 className="text-2xl font-bold text-foreground">Smart Chat</h1>
+      <div className="flex items-center gap-2 mb-1">
+        <h1 className="text-xl font-semibold text-foreground">Chat</h1>
         {isLLMConfigured && (
           <span className="inline-flex items-center gap-1 text-[10px] font-medium bg-primary/10 text-primary px-2 py-0.5 rounded-full">
             <Sparkles className="h-3 w-3" /> AI
           </span>
         )}
       </div>
-      <p className="text-xs text-muted-foreground mb-4">
+      <p className="text-[11px] text-muted-foreground mb-4">
         {isLLMConfigured
           ? 'AI-powered — understands complex sentences naturally.'
-          : 'Add your API key in ⚙️ settings to enable AI mode.'}
+          : 'Add your API key in settings to enable AI mode.'}
       </p>
 
       {/* Message list */}
