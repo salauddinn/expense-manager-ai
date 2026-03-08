@@ -1,23 +1,23 @@
-import { useLocalStorage } from './useLocalStorage';
+import { useLocalCrud } from './useLocalCrud';
 import { Transaction } from '@/types/finance';
 import { useCallback } from 'react';
 
 export function useTransactions() {
-  const [transactions, setTransactions] = useLocalStorage<Transaction[]>('finance_transactions', []);
+  const { items: transactions, add, remove, update, setItems } = useLocalCrud<Transaction>('finance_transactions');
 
-  const addTransaction = useCallback((t: Omit<Transaction, 'id' | 'createdAt'>) => {
-    const newT: Transaction = { ...t, id: crypto.randomUUID(), createdAt: new Date().toISOString() };
-    setTransactions((prev) => [newT, ...prev]);
-    return newT;
-  }, [setTransactions]);
+  const addTransaction = useCallback(
+    (t: Omit<Transaction, 'id' | 'createdAt'>) => {
+      const newT = { ...t, id: crypto.randomUUID(), createdAt: new Date().toISOString() } as Transaction;
+      setItems((prev) => [newT, ...prev]);
+      return newT;
+    },
+    [setItems],
+  );
 
-  const deleteTransaction = useCallback((id: string) => {
-    setTransactions((prev) => prev.filter((t) => t.id !== id));
-  }, [setTransactions]);
-
-  const updateTransaction = useCallback((id: string, updates: Partial<Transaction>) => {
-    setTransactions((prev) => prev.map((t) => t.id === id ? { ...t, ...updates } : t));
-  }, [setTransactions]);
-
-  return { transactions, addTransaction, deleteTransaction, updateTransaction };
+  return {
+    transactions,
+    addTransaction,
+    deleteTransaction: remove,
+    updateTransaction: update,
+  };
 }
