@@ -8,6 +8,7 @@ import Chat from "./pages/Chat";
 import Transactions from "./pages/Transactions";
 import LoanCalculator from "./pages/LoanCalculator";
 import Accounts from "./pages/Accounts";
+import Budget from "./pages/Budget";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,6 +25,7 @@ const App = () => (
           <Route path="/transactions" element={<Transactions />} />
           <Route path="/loan-calculator" element={<LoanCalculator />} />
           <Route path="/accounts" element={<Accounts />} />
+          <Route path="/budget" element={<Budget />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
