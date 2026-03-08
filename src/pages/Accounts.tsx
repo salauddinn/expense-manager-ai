@@ -10,7 +10,8 @@ import { useBankAccounts } from '@/hooks/useBankAccounts';
 import { useCreditCards } from '@/hooks/useCreditCards';
 import { useAssets } from '@/hooks/useAssets';
 import { formatCurrency, CURRENCIES } from '@/lib/currencies';
-import { Landmark, CreditCard, Gem, Plus, Trash2 } from 'lucide-react';
+import { BankAccount, CreditCard as CreditCardType, Asset } from '@/types/finance';
+import { Landmark, CreditCard as CreditCardIcon, Gem, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function Accounts() {
@@ -45,7 +46,7 @@ export default function Accounts() {
       </Section>
 
       {/* Credit Cards */}
-      <Section title="Credit Cards" icon={<CreditCard className="h-4 w-4" />}>
+      <Section title="Credit Cards" icon={<CreditCardIcon className="h-4 w-4" />}>
         <AddCardDialog onAdd={addCard} />
         {cards.length === 0 && <EmptyState text="No credit cards added" />}
         {cards.map((c) => (
@@ -78,7 +79,7 @@ export default function Accounts() {
                 <p className="text-xs text-muted-foreground capitalize">{a.type}</p>
               </div>
               <div className="flex items-center gap-2">
-                <p className="text-sm font-semibold text-emerald-600">{formatCurrency(a.value, a.currency)}</p>
+                <p className="text-sm font-semibold text-success">{formatCurrency(a.value, a.currency)}</p>
                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { deleteAsset(a.id); toast.success('Deleted'); }}>
                   <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
                 </Button>
@@ -107,7 +108,7 @@ function EmptyState({ text }: { text: string }) {
   return <p className="text-sm text-muted-foreground text-center py-4">{text}</p>;
 }
 
-function AddBankDialog({ onAdd }: { onAdd: (a: any) => void }) {
+function AddBankDialog({ onAdd }: { onAdd: (a: Omit<BankAccount, 'id'>) => void }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
   const [type, setType] = useState<'savings' | 'current' | 'salary'>('savings');
@@ -154,7 +155,7 @@ function AddBankDialog({ onAdd }: { onAdd: (a: any) => void }) {
   );
 }
 
-function AddCardDialog({ onAdd }: { onAdd: (c: any) => void }) {
+function AddCardDialog({ onAdd }: { onAdd: (c: Omit<CreditCardType, 'id'>) => void }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
   const [limit, setLimit] = useState(0);
@@ -194,7 +195,7 @@ function AddCardDialog({ onAdd }: { onAdd: (c: any) => void }) {
   );
 }
 
-function AddAssetDialog({ onAdd }: { onAdd: (a: any) => void }) {
+function AddAssetDialog({ onAdd }: { onAdd: (a: Omit<Asset, 'id'>) => void }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
   const [type, setType] = useState<'property' | 'investment' | 'vehicle' | 'other'>('property');

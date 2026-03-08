@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -74,12 +75,13 @@ export default function LoanCalculator() {
         </Card>
       </div>
 
-      <button
+      <Button
+        variant="link"
         onClick={() => setShowTable(!showTable)}
-        className="text-sm text-primary underline underline-offset-4 mb-4 block"
+        className="px-0 mb-4"
       >
         {showTable ? 'Hide' : 'Show'} Amortization Schedule
-      </button>
+      </Button>
 
       {showTable && (
         <Card>

@@ -21,11 +21,10 @@ export default function Budget() {
   const [limit, setLimit] = useState('');
   const [showForm, setShowForm] = useState(false);
 
-  const now = new Date();
-  const monthStart = startOfMonth(now);
-  const monthEnd = endOfMonth(now);
-
   const monthlyExpenses = useMemo(() => {
+    const now = new Date();
+    const monthStart = startOfMonth(now);
+    const monthEnd = endOfMonth(now);
     const map: Record<string, number> = {};
     transactions
       .filter((t) => t.type === 'expense' && isWithinInterval(new Date(t.date), { start: monthStart, end: monthEnd }))
@@ -33,7 +32,7 @@ export default function Budget() {
         map[t.category] = (map[t.category] || 0) + t.amount;
       });
     return map;
-  }, [transactions, monthStart, monthEnd]);
+  }, [transactions]);
 
   const handleAdd = () => {
     if (!selectedCategory || !limit || parseFloat(limit) <= 0) {

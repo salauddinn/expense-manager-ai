@@ -88,7 +88,7 @@ export default function Transactions() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0 ml-2">
-                    <p className={`text-sm font-semibold ${t.type === 'income' ? 'text-emerald-600' : 'text-destructive'}`}>
+                    <p className={`text-sm font-semibold ${t.type === 'income' ? 'text-success' : 'text-destructive'}`}>
                       {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount, t.currency)}
                     </p>
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDelete(t.id)}>
