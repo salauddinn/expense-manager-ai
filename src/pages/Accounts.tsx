@@ -46,7 +46,7 @@ export default function Accounts() {
       </Section>
 
       {/* Credit Cards */}
-      <Section title="Credit Cards" icon={<CreditCard className="h-4 w-4" />}>
+      <Section title="Credit Cards" icon={<CreditCardIcon className="h-4 w-4" />}>
         <AddCardDialog onAdd={addCard} />
         {cards.length === 0 && <EmptyState text="No credit cards added" />}
         {cards.map((c) => (
