@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { CURRENCIES } from '@/lib/currencies';
 import { ALL_CATEGORIES as CATEGORIES } from '@/lib/categories';
 import { CategoryType, TransactionType } from '@/types/finance';
@@ -29,34 +30,36 @@ interface AddTransactionDialogProps {
 export function AddTransactionDialog({ onAdd }: AddTransactionDialogProps) {
   const [open, setOpen] = useState(false);
   const [type, setType] = useState<TransactionType>('expense');
-  const [amount, setAmount] = useState(0);
+  const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState<CategoryType>('other');
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [currency, setCurrency] = useState('INR');
-  const [cashback, setCashback] = useState(0);
+  const [cashback, setCashback] = useState('');
 
   const handleAdd = () => {
-    if (!description.trim() || amount <= 0) {
+    const numAmount = Number(amount);
+    if (!description.trim() || numAmount <= 0) {
       toast.error('Please enter a description and amount');
       return;
     }
+    const numCashback = Number(cashback);
     onAdd({
       type,
-      amount,
+      amount: numAmount,
       currency,
       category,
       description,
       date: new Date(date).toISOString(),
-      ...(cashback > 0 && { cashback }),
+      ...(numCashback > 0 && { cashback: numCashback }),
     });
     // Reset form
     setType('expense');
-    setAmount(0);
+    setAmount('');
     setDescription('');
     setCategory('other');
     setDate(new Date().toISOString().slice(0, 10));
-    setCashback(0);
+    setCashback('');
     setOpen(false);
     toast.success('Transaction added');
   };
@@ -68,52 +71,56 @@ export function AddTransactionDialog({ onAdd }: AddTransactionDialogProps) {
           <Plus className="h-3.5 w-3.5" /> Add
         </Button>
       </DialogTrigger>
-      <DialogContent>
-        <DialogHeader><DialogTitle>Add Transaction</DialogTitle></DialogHeader>
-        <div className="space-y-4 pt-2">
-          <Field label="Type">
-            <Select value={type} onValueChange={(v) => setType(v as TransactionType)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="income">Income</SelectItem>
-                <SelectItem value="expense">Expense</SelectItem>
-              </SelectContent>
-            </Select>
-          </Field>
-          <Field label="Description">
-            <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="e.g. Lunch at cafe" />
-          </Field>
-          <Field label="Amount">
-            <Input type="number" value={amount || ''} onChange={(e) => setAmount(Number(e.target.value))} placeholder="0" />
-          </Field>
-          <Field label="Category">
-            <Select value={category} onValueChange={(v) => setCategory(v as CategoryType)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {CATEGORIES.map((c) => (
-                  <SelectItem key={c.value} value={c.value}>{c.icon} {c.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </Field>
-          <Field label="Date">
-            <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-          </Field>
-          <Field label="Currency">
-            <Select value={currency} onValueChange={setCurrency}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {CURRENCIES.map((c) => (
-                  <SelectItem key={c.code} value={c.code}>{c.symbol} {c.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </Field>
-          <Field label="Cashback (optional)">
-            <Input type="number" value={cashback || ''} onChange={(e) => setCashback(Number(e.target.value))} placeholder="0" />
-          </Field>
-          <Button onClick={handleAdd} className="w-full rounded-xl h-11">Add Transaction</Button>
-        </div>
+      <DialogContent className="max-h-[85vh] p-0">
+        <DialogHeader className="px-6 pt-6 pb-0">
+          <DialogTitle>Add Transaction</DialogTitle>
+        </DialogHeader>
+        <ScrollArea className="max-h-[70vh] px-6 pb-6">
+          <div className="space-y-4 pt-2">
+            <Field label="Type">
+              <Select value={type} onValueChange={(v) => setType(v as TransactionType)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="income">Income</SelectItem>
+                  <SelectItem value="expense">Expense</SelectItem>
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field label="Description">
+              <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="e.g. Lunch at cafe" />
+            </Field>
+            <Field label="Amount">
+              <Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0" />
+            </Field>
+            <Field label="Category">
+              <Select value={category} onValueChange={(v) => setCategory(v as CategoryType)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {CATEGORIES.map((c) => (
+                    <SelectItem key={c.value} value={c.value}>{c.icon} {c.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field label="Date">
+              <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+            </Field>
+            <Field label="Currency">
+              <Select value={currency} onValueChange={setCurrency}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {CURRENCIES.map((c) => (
+                    <SelectItem key={c.code} value={c.code}>{c.symbol} {c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field label="Cashback (optional)">
+              <Input type="number" value={cashback} onChange={(e) => setCashback(e.target.value)} placeholder="0" />
+            </Field>
+            <Button onClick={handleAdd} className="w-full rounded-xl h-11">Add Transaction</Button>
+          </div>
+        </ScrollArea>
       </DialogContent>
     </Dialog>
   );
