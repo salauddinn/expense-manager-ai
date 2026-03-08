@@ -21,7 +21,7 @@ const SYSTEM_PROMPT = `You are FinTrack, a smart personal finance assistant. Par
 You MUST call one of the provided tools based on what the user wants. Choose the right tool:
 
 1. **add_transaction** — When they mention spending, earning, paying, receiving money
-2. **add_bank_account** — When they mention adding a bank/savings/current/salary account
+2. **add_bank_account** — When they mention adding a bank/savings/current/salary/cash account
 3. **add_credit_card** — When they mention adding a credit card
 4. **add_asset** — When they mention property, investments, vehicles, gold, stocks, mutual funds
 5. **add_loan** — When they mention loans (home, car, personal, education)
