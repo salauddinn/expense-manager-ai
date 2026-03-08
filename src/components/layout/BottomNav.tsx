@@ -13,8 +13,8 @@ const NAV_ITEMS = [
 export function BottomNav() {
   const location = useLocation();
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
-      <div className="mx-auto flex max-w-lg items-center justify-around py-1">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card shadow-[0_-1px_3px_rgba(0,0,0,0.04)]">
+      <div className="mx-auto flex max-w-2xl items-center justify-around py-2">
         {NAV_ITEMS.map(({ to, label, icon: Icon }) => {
           const active = location.pathname === to;
           return (
@@ -22,12 +22,15 @@ export function BottomNav() {
               key={to}
               to={to}
               className={cn(
-                'flex flex-col items-center gap-0.5 px-3 py-2 text-[11px] font-medium transition-colors rounded-lg',
-                active ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
+                'flex flex-col items-center gap-1 px-3 py-1.5 text-[10px] font-medium transition-colors rounded-lg',
+                active ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
               )}
             >
-              <Icon className={cn('h-5 w-5', active && 'text-primary')} />
+              <Icon className="h-4 w-4" strokeWidth={active ? 2 : 1.5} />
               {label}
+              {active && (
+                <span className="h-1 w-1 rounded-full bg-primary" />
+              )}
             </NavLink>
           );
         })}

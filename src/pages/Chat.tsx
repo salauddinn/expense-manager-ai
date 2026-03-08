@@ -564,14 +564,13 @@ function EmptyState({ visible }: { visible: boolean }) {
   if (!visible) return null;
 
   return (
-    <div className="text-center py-8 text-muted-foreground space-y-3">
-      <p className="text-lg">💬</p>
-      <p className="text-sm font-medium">Try these examples:</p>
-      <div className="space-y-1 text-xs">
+    <div className="text-center py-10 text-muted-foreground space-y-4">
+      <p className="text-sm font-medium">Try these examples</p>
+      <div className="flex flex-wrap justify-center gap-2">
         {EXAMPLES.map(({ emoji, text }) => (
-          <p key={text}>
+          <span key={text} className="inline-flex items-center gap-1 text-xs bg-secondary px-3 py-1.5 rounded-full">
             {emoji} {text}
-          </p>
+          </span>
         ))}
       </div>
     </div>

@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -52,16 +52,16 @@ export default function Budget() {
 
   return (
     <AppLayout>
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-bold text-foreground">Budget Goals</h1>
-        <Button size="sm" onClick={() => setShowForm(!showForm)} className="gap-1">
+      <div className="flex items-center justify-between mb-5">
+        <h1 className="text-xl font-semibold text-foreground">Budget Goals</h1>
+        <Button variant="ghost" size="sm" onClick={() => setShowForm(!showForm)} className="gap-1.5 text-muted-foreground hover:text-foreground">
           <Plus className="h-4 w-4" /> Add
         </Button>
       </div>
 
       {showForm && (
-        <Card className="mb-4">
-          <CardContent className="pt-4 space-y-3">
+        <Card className="mb-5">
+          <CardContent className="pt-5 pb-4 space-y-3">
             <Select value={selectedCategory} onValueChange={setSelectedCategory}>
               <SelectTrigger>
                 <SelectValue placeholder="Select category" />
@@ -86,9 +86,10 @@ export default function Budget() {
       )}
 
       {goals.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground">
-          <Target className="h-12 w-12 mx-auto mb-3 opacity-50" />
-          <p className="text-sm">No budget goals yet. Add one to track your spending!</p>
+        <div className="text-center py-16 text-muted-foreground">
+          <Target className="h-10 w-10 mx-auto mb-3 opacity-30" strokeWidth={1.5} />
+          <p className="text-sm">No budget goals yet</p>
+          <p className="text-xs mt-1">Add one to track your spending</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -100,18 +101,18 @@ export default function Budget() {
 
             return (
               <Card key={goal.id}>
-                <CardContent className="pt-4 pb-3">
-                  <div className="flex items-center justify-between mb-2">
+                <CardContent className="pt-4 pb-3 px-4">
+                  <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
-                      <span className="text-lg">{cat.icon}</span>
+                      <span className="text-base">{cat.icon}</span>
                       <span className="text-sm font-medium">{cat.label}</span>
                     </div>
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { deleteGoal(goal.id); toast.success('Goal removed'); }}>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => { deleteGoal(goal.id); toast.success('Goal removed'); }}>
                       <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
                     </Button>
                   </div>
-                  <Progress value={percentage} className={`h-2 mb-2 ${isOver ? '[&>div]:bg-destructive' : '[&>div]:bg-primary'}`} />
-                  <div className="flex justify-between text-xs text-muted-foreground">
+                  <Progress value={percentage} className={`h-1.5 mb-2 ${isOver ? '[&>div]:bg-destructive' : '[&>div]:bg-primary'}`} />
+                  <div className="flex justify-between text-[11px] text-muted-foreground">
                     <span className={isOver ? 'text-destructive font-medium' : ''}>
                       {formatCurrency(spent, goal.currency)} spent
                     </span>
