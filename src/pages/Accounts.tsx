@@ -78,7 +78,7 @@ export default function Accounts() {
                 <p className="text-xs text-muted-foreground capitalize">{a.type}</p>
               </div>
               <div className="flex items-center gap-2">
-                <p className="text-sm font-semibold text-emerald-600">{formatCurrency(a.value, a.currency)}</p>
+                <p className="text-sm font-semibold text-success">{formatCurrency(a.value, a.currency)}</p>
                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { deleteAsset(a.id); toast.success('Deleted'); }}>
                   <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
                 </Button>
