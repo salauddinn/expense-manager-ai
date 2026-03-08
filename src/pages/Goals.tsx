@@ -189,13 +189,14 @@ export default function Goals() {
                 <CardContent className="pt-4 pb-3 px-4">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-2.5">
-                      <div
-                        className="h-10 w-10 rounded-xl flex items-center justify-center text-xl"
-                        style={{ backgroundColor: `${goalColor}15` }}
-                      >
-                        {goal.icon}
-                      </div>
-                      <div>
+                      <Link to={`/goals/${goal.id}`} className="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
+                        <div
+                          className="h-10 w-10 rounded-xl flex items-center justify-center text-xl"
+                          style={{ backgroundColor: `${goalColor}15` }}
+                        >
+                          {goal.icon}
+                        </div>
+                        <div>
                         <p className="text-sm font-semibold">{goal.name}</p>
                         <div className="flex items-center gap-2 flex-wrap">
                           <span
