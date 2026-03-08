@@ -77,6 +77,8 @@ export interface BudgetGoal {
   currency: string;
 }
 
+export type GoalCategory = 'emergency' | 'travel' | 'education' | 'home' | 'retirement' | 'wedding' | 'gadget' | 'custom';
+
 export interface FinancialGoal {
   id: string;
   name: string;
@@ -85,6 +87,12 @@ export interface FinancialGoal {
   currency: string;
   deadline?: string;
   icon: string;
+  category: GoalCategory;
+  color: string;
+  /** Milestone percentages already celebrated */
+  celebratedMilestones?: number[];
+  /** Linked transaction IDs for auto-deduction tracking */
+  linkedTransactionIds?: string[];
   createdAt: string;
 }
 

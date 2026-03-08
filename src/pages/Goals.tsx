@@ -6,26 +6,34 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
-import { useFinancialGoals } from '@/hooks/useFinancialGoals';
+import { MilestoneCelebration, useMilestoneCelebration } from '@/components/MilestoneCelebration';
+import { useFinancialGoals, GOAL_CATEGORIES, getGoalCategoryInfo } from '@/hooks/useFinancialGoals';
+import { useTransactions } from '@/hooks/useTransactions';
 import { formatCurrency } from '@/lib/currencies';
-import { Plus, Trash2, Target, TrendingUp, MessageSquare } from 'lucide-react';
+import { GoalCategory } from '@/types/finance';
+import { Plus, Trash2, Target, TrendingUp, MessageSquare, Link2 } from 'lucide-react';
 import { toast } from 'sonner';
 
-const GOAL_ICONS = ['🏖️', '🚨', '🏠', '🚗', '📚', '💍', '🎮', '✈️', '💻', '🎯'];
-
 export default function Goals() {
-  const { goals, addGoal, addContribution, deleteGoal } = useFinancialGoals();
+  const { goals, addGoal, addContribution, linkTransaction, deleteGoal } = useFinancialGoals();
+  const { transactions } = useTransactions();
+  const { current: celebration, celebrate, dismiss } = useMilestoneCelebration();
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [contribGoalId, setContribGoalId] = useState<string | null>(null);
   const [contribAmount, setContribAmount] = useState('');
+  const [linkGoalId, setLinkGoalId] = useState<string | null>(null);
 
   // New goal form
   const [name, setName] = useState('');
   const [target, setTarget] = useState('');
   const [deadline, setDeadline] = useState('');
-  const [selectedIcon, setSelectedIcon] = useState('🎯');
+  const [selectedCategory, setSelectedCategory] = useState<GoalCategory>('custom');
+
+  const catInfo = getGoalCategoryInfo(selectedCategory);
 
   const handleAdd = () => {
     if (!name.trim() || !target || parseFloat(target) <= 0) {
@@ -37,13 +45,15 @@ export default function Goals() {
       targetAmount: parseFloat(target),
       currency: 'INR',
       deadline: deadline || undefined,
-      icon: selectedIcon,
+      icon: catInfo.icon,
+      category: selectedCategory,
+      color: catInfo.color,
     });
     toast.success('Goal created!');
     setName('');
     setTarget('');
     setDeadline('');
-    setSelectedIcon('🎯');
+    setSelectedCategory('custom');
     setDialogOpen(false);
   };
 
@@ -53,14 +63,50 @@ export default function Goals() {
       toast.error('Enter a valid amount');
       return;
     }
-    addContribution(id, amount);
+    const goal = goals.find((g) => g.id === id);
+    const { newMilestones } = addContribution(id, amount);
     toast.success(`Added ${formatCurrency(amount, 'INR')}!`);
+    if (newMilestones.length > 0 && goal) {
+      celebrate(newMilestones, goal.name);
+    }
     setContribGoalId(null);
     setContribAmount('');
   };
 
+  const handleLinkTransaction = (goalId: string, txId: string) => {
+    const tx = transactions.find((t) => t.id === txId);
+    const goal = goals.find((g) => g.id === goalId);
+    if (!tx || !goal) return;
+
+    const { newMilestones } = linkTransaction(goalId, txId, tx.amount);
+    toast.success(`Linked "${tx.description}" — ${formatCurrency(tx.amount, tx.currency)} added`);
+    if (newMilestones.length > 0) {
+      celebrate(newMilestones, goal.name);
+    }
+    setLinkGoalId(null);
+  };
+
+  // Get income transactions not yet linked to this goal
+  const getUnlinkedTransactions = (goalId: string) => {
+    const goal = goals.find((g) => g.id === goalId);
+    const linked = goal?.linkedTransactionIds ?? [];
+    return transactions
+      .filter((t) => t.type === 'income' && !linked.includes(t.id))
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .slice(0, 10);
+  };
+
   return (
     <AppLayout>
+      {/* Celebration overlay */}
+      {celebration && (
+        <MilestoneCelebration
+          milestone={celebration.milestone}
+          goalName={celebration.goalName}
+          onDone={dismiss}
+        />
+      )}
+
       <div className="flex items-center justify-between mb-5">
         <h1 className="text-xl font-bold text-foreground tracking-tight">Financial Goals</h1>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -72,20 +118,25 @@ export default function Goals() {
           <DialogContent>
             <DialogHeader><DialogTitle>Create Goal</DialogTitle></DialogHeader>
             <div className="space-y-4 pt-2">
+              {/* Category picker */}
               <div>
-                <Label className="text-xs mb-2 block">Pick an icon</Label>
-                <div className="flex flex-wrap gap-2">
-                  {GOAL_ICONS.map((icon) => (
+                <Label className="text-xs mb-2 block">Category</Label>
+                <div className="grid grid-cols-4 gap-2">
+                  {GOAL_CATEGORIES.map((cat) => (
                     <button
-                      key={icon}
-                      onClick={() => setSelectedIcon(icon)}
-                      className={`h-10 w-10 rounded-xl text-lg flex items-center justify-center transition-all ${
-                        selectedIcon === icon
-                          ? 'bg-primary/10 ring-2 ring-primary'
+                      key={cat.value}
+                      onClick={() => {
+                        setSelectedCategory(cat.value);
+                        if (!name.trim()) setName(cat.label);
+                      }}
+                      className={`flex flex-col items-center gap-1 p-2.5 rounded-xl text-center transition-all ${
+                        selectedCategory === cat.value
+                          ? 'ring-2 ring-primary bg-primary/5'
                           : 'bg-muted hover:bg-muted/80'
                       }`}
                     >
-                      {icon}
+                      <span className="text-lg">{cat.icon}</span>
+                      <span className="text-[10px] font-medium leading-tight">{cat.label}</span>
                     </button>
                   ))}
                 </div>
@@ -128,31 +179,42 @@ export default function Goals() {
               ? Math.min((goal.currentAmount / goal.targetAmount) * 100, 100)
               : 0;
             const isComplete = goal.currentAmount >= goal.targetAmount;
+            const goalColor = goal.color ?? 'hsl(var(--primary))';
+            const celebrated = goal.celebratedMilestones ?? [];
 
             return (
-              <Card key={goal.id} className="group">
+              <Card key={goal.id} className="group overflow-hidden">
+                {/* Color accent bar */}
+                <div className="h-1" style={{ backgroundColor: goalColor }} />
                 <CardContent className="pt-4 pb-3 px-4">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-2.5">
-                      <div className="h-10 w-10 rounded-xl bg-muted flex items-center justify-center text-xl">
+                      <div
+                        className="h-10 w-10 rounded-xl flex items-center justify-center text-xl"
+                        style={{ backgroundColor: `${goalColor}15` }}
+                      >
                         {goal.icon}
                       </div>
                       <div>
                         <p className="text-sm font-semibold">{goal.name}</p>
-                        {goal.deadline && (
-                          <p className="text-[10px] text-muted-foreground">
-                            by {new Date(goal.deadline).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}
-                          </p>
-                        )}
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="text-[10px] font-medium px-1.5 py-0.5 rounded-full"
+                            style={{ backgroundColor: `${goalColor}15`, color: goalColor }}
+                          >
+                            {getGoalCategoryInfo(goal.category ?? 'custom').label}
+                          </span>
+                          {goal.deadline && (
+                            <span className="text-[10px] text-muted-foreground">
+                              by {new Date(goal.deadline).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                     <ConfirmDialog
                       trigger={
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
+                        <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity">
                           <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
                         </Button>
                       }
@@ -162,10 +224,32 @@ export default function Goals() {
                     />
                   </div>
 
+                  {/* Milestone dots */}
+                  <div className="flex items-center gap-1 mb-1.5">
+                    {[25, 50, 75, 100].map((m) => (
+                      <div
+                        key={m}
+                        className={`h-1.5 w-1.5 rounded-full transition-all ${
+                          celebrated.includes(m) ? 'scale-125' : 'opacity-30'
+                        }`}
+                        style={{ backgroundColor: celebrated.includes(m) ? goalColor : 'hsl(var(--muted-foreground))' }}
+                        title={`${m}%`}
+                      />
+                    ))}
+                    <span className="text-[9px] text-muted-foreground ml-1">milestones</span>
+                  </div>
+
                   <Progress
                     value={pct}
-                    className={`h-2 rounded-full mb-2 ${isComplete ? '[&>div]:bg-success' : '[&>div]:bg-primary'}`}
+                    className="h-2.5 rounded-full mb-2"
+                    style={{ ['--progress-color' as string]: goalColor }}
                   />
+                  {/* Override progress bar color via inline style */}
+                  <style>{`
+                    [style*="--progress-color: ${goalColor}"] > div {
+                      background-color: ${goalColor} !important;
+                    }
+                  `}</style>
 
                   <div className="flex items-center justify-between">
                     <div className="flex items-baseline gap-1">
@@ -176,14 +260,17 @@ export default function Goals() {
                         / {formatCurrency(goal.targetAmount, goal.currency)}
                       </span>
                     </div>
-                    <span className={`text-xs font-semibold ${isComplete ? 'text-success' : 'text-muted-foreground'}`}>
+                    <span
+                      className="text-xs font-semibold"
+                      style={{ color: isComplete ? 'hsl(var(--success))' : goalColor }}
+                    >
                       {Math.round(pct)}%
                     </span>
                   </div>
 
-                  {/* Contribution */}
+                  {/* Actions */}
                   {!isComplete && (
-                    <div className="mt-3">
+                    <div className="mt-3 space-y-2">
                       {contribGoalId === goal.id ? (
                         <div className="flex gap-2">
                           <Input
@@ -201,21 +288,58 @@ export default function Goals() {
                             ✕
                           </Button>
                         </div>
+                      ) : linkGoalId === goal.id ? (
+                        <div className="space-y-1.5">
+                          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Link income transaction</p>
+                          {getUnlinkedTransactions(goal.id).length === 0 ? (
+                            <p className="text-xs text-muted-foreground py-2">No unlinked income transactions</p>
+                          ) : (
+                            <div className="max-h-32 overflow-y-auto space-y-1">
+                              {getUnlinkedTransactions(goal.id).map((tx) => (
+                                <button
+                                  key={tx.id}
+                                  onClick={() => handleLinkTransaction(goal.id, tx.id)}
+                                  className="w-full flex items-center justify-between px-3 py-2 bg-muted/50 rounded-lg hover:bg-muted text-xs transition-colors"
+                                >
+                                  <span className="font-medium truncate">{tx.description}</span>
+                                  <span className="font-semibold text-success shrink-0 ml-2">
+                                    +{formatCurrency(tx.amount, tx.currency)}
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                          <Button size="sm" variant="ghost" className="rounded-lg w-full text-xs" onClick={() => setLinkGoalId(null)}>
+                            Cancel
+                          </Button>
+                        </div>
                       ) : (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="w-full gap-1.5 text-xs rounded-lg"
-                          onClick={() => setContribGoalId(goal.id)}
-                        >
-                          <TrendingUp className="h-3 w-3" /> Add Contribution
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex-1 gap-1.5 text-xs rounded-lg"
+                            onClick={() => setContribGoalId(goal.id)}
+                          >
+                            <TrendingUp className="h-3 w-3" /> Add Manually
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex-1 gap-1.5 text-xs rounded-lg"
+                            onClick={() => setLinkGoalId(goal.id)}
+                          >
+                            <Link2 className="h-3 w-3" /> Link Transaction
+                          </Button>
+                        </div>
                       )}
                     </div>
                   )}
 
                   {isComplete && (
-                    <p className="text-xs text-success font-semibold mt-2 text-center">🎉 Goal reached!</p>
+                    <p className="text-xs font-semibold mt-2 text-center" style={{ color: 'hsl(var(--success))' }}>
+                      🎉 Goal reached!
+                    </p>
                   )}
                 </CardContent>
               </Card>
