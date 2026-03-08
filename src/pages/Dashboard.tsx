@@ -2,7 +2,7 @@
  * Dashboard — Financial overview with net worth, stats, chart, and recent transactions.
  */
 
-import { useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { AlertsBanner } from '@/components/AlertsBanner';
 import { Card, CardContent } from '@/components/ui/card';
@@ -186,21 +186,14 @@ export default function Dashboard() {
   );
 }
 
-function StatCard({
-  title,
-  value,
-  accent,
-}: {
-  title: string;
-  value: string;
-  accent: string;
-}) {
-  return (
-    <Card className={ACCENT_BORDER[accent] ?? ''}>
+const StatCard = React.forwardRef<HTMLDivElement, { title: string; value: string; accent: string }>(
+  ({ title, value, accent }, ref) => (
+    <Card ref={ref} className={ACCENT_BORDER[accent] ?? ''}>
       <CardContent className="pt-4 pb-3 px-4">
         <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-0.5">{title}</p>
         <p className={`text-xl font-bold tracking-tight ${VALUE_COLOR[accent] ?? 'text-foreground'}`}>{value}</p>
       </CardContent>
     </Card>
-  );
-}
+  ),
+);
+StatCard.displayName = 'StatCard';
