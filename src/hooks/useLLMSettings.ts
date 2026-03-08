@@ -3,6 +3,7 @@
  * The user provides their own API key (stored only in their browser).
  */
 
+import { useCallback } from 'react';
 import { useLocalStorage } from './useLocalStorage';
 
 export type LLMProvider = 'openai' | 'google';
@@ -40,13 +41,13 @@ export function useLLMSettings() {
 
   const isConfigured = !!settings.apiKey.trim();
 
-  const updateSettings = (updates: Partial<LLMSettings>) => {
+  const updateSettings = useCallback((updates: Partial<LLMSettings>) => {
     setSettings((prev) => ({ ...prev, ...updates }));
-  };
+  }, [setSettings]);
 
-  const clearApiKey = () => {
+  const clearApiKey = useCallback(() => {
     setSettings((prev) => ({ ...prev, apiKey: '' }));
-  };
+  }, [setSettings]);
 
   return { settings, isConfigured, updateSettings, clearApiKey };
 }
