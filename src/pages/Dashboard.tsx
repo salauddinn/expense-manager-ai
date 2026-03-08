@@ -74,7 +74,10 @@ export default function Dashboard() {
   const netWorth = totalBankBalance + totalAssetValue - totalCreditDebt - totalLoanOutstanding;
 
   const chartData = useMemo(() => getMonthlyChartData(transactions), [transactions]);
-  const recentTransactions = transactions.slice(0, 5);
+  const recentTransactions = useMemo(
+    () => [...transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5),
+    [transactions],
+  );
 
   return (
     <AppLayout>
