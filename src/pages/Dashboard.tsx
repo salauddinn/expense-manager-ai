@@ -24,7 +24,7 @@ import {
 } from 'date-fns';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Transaction } from '@/types/finance';
-import { TrendingUp, TrendingDown, ArrowUpRight, MessageSquare } from 'lucide-react';
+import { TrendingUp, TrendingDown, ArrowUpRight, MessageSquare, RotateCcw } from 'lucide-react';
 
 function getMonthlyChartData(transactions: Transaction[]) {
   return Array.from({ length: 6 }, (_, i) => {
@@ -75,6 +75,7 @@ export default function Dashboard() {
   const totalLoanOutstanding = sumBy(loans, (l) => l.principal);
   const totalAssetValue = sumBy(assets, (a) => a.value);
   const netWorth = totalBankBalance + totalAssetValue - totalCreditDebt - totalLoanOutstanding;
+  const totalCashback = sumBy(transactions, (t) => t.cashback ?? 0);
 
   const chartData = useMemo(() => getMonthlyChartData(transactions), [transactions]);
   const recentTransactions = useMemo(
@@ -118,6 +119,9 @@ export default function Dashboard() {
         <StatCard title="Credit Debt" value={formatCurrency(totalCreditDebt, primaryCurrency)} accent="destructive" />
         <StatCard title="Assets" value={formatCurrency(totalAssetValue, primaryCurrency)} accent="success" />
         <StatCard title="Loans" value={formatCurrency(totalLoanOutstanding, primaryCurrency)} accent="warning" />
+        {totalCashback > 0 && (
+          <StatCard title="Cashback Earned" value={formatCurrency(totalCashback, primaryCurrency)} accent="success" />
+        )}
       </div>
 
       {/* Income vs Expenses Chart */}

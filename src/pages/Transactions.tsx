@@ -185,10 +185,11 @@ function EditTransactionDialog({
   const [category, setCategory] = useState<CategoryType>(transaction.category);
   const [date, setDate] = useState(transaction.date.slice(0, 10));
   const [currency, setCurrency] = useState(transaction.currency);
+  const [cashback, setCashback] = useState(transaction.cashback ?? 0);
 
   const handleSave = () => {
     if (!description.trim()) return;
-    onSave({ type, amount, description, category, date: new Date(date).toISOString(), currency });
+    onSave({ type, amount, description, category, date: new Date(date).toISOString(), currency, cashback: cashback || undefined });
   };
 
   return (
@@ -239,6 +240,10 @@ function EditTransactionDialog({
                 ))}
               </SelectContent>
             </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Cashback</Label>
+            <Input type="number" value={cashback} onChange={(e) => setCashback(Number(e.target.value))} placeholder="0" />
           </div>
           <div className="flex gap-2">
             <Button onClick={handleSave} className="flex-1 rounded-xl h-11">Save Changes</Button>

@@ -40,6 +40,8 @@ export interface ParsedTransaction {
   sourceName?: string;
   /** Whether the source is a credit card (vs bank account) */
   sourceIsCard?: boolean;
+  /** Cashback amount received on this transaction */
+  cashback?: number;
 }
 
 export interface ParsedBankAccount {
@@ -586,6 +588,15 @@ function parseTransaction(
 
   const source = extractSource(lower);
 
+  // Detect cashback: "cashback ₹50", "cashback 50", "got 50 back", "50 cashback"
+  let cashback: number | undefined;
+  const cbMatch = lower.match(/cashback\s*(?:of\s*)?(?:[₹$€£¥]\s*)?([\d,]+\.?\d*)/i)
+    ?? lower.match(/([\d,]+\.?\d*)\s*cashback/i)
+    ?? lower.match(/got\s*(?:[₹$€£¥]\s*)?([\d,]+\.?\d*)\s*back/i);
+  if (cbMatch) {
+    cashback = parseNum(cbMatch[1]);
+  }
+
   return {
     type,
     amount,
@@ -594,6 +605,7 @@ function parseTransaction(
     description: message,
     date: detectDate(lower),
     ...(source && { sourceName: source.sourceName, sourceIsCard: source.sourceIsCard }),
+    ...(cashback && { cashback }),
   };
 }
 

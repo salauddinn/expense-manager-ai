@@ -32,6 +32,8 @@ export interface Transaction {
   linkedAccountId?: string;
   /** Linked credit card ID — outstanding auto-updated on save */
   linkedCardId?: string;
+  /** Cashback received on this transaction */
+  cashback?: number;
   createdAt: string;
 }
 
