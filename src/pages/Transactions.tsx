@@ -3,21 +3,26 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useTransactions } from '@/hooks/useTransactions';
-import { formatCurrency } from '@/lib/currencies';
-import { getCategoryInfo } from '@/lib/categories';
+import { formatCurrency, CURRENCIES } from '@/lib/currencies';
+import { getCategoryInfo, ALL_CATEGORIES as CATEGORIES } from '@/lib/categories';
 import { exportTransactionsCSV } from '@/lib/exportData';
+import { Transaction, CategoryType, TransactionType } from '@/types/finance';
 import { format } from 'date-fns';
-import { Trash2, Search, Download } from 'lucide-react';
+import { Trash2, Search, Download, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
 const FILTERS = ['all', 'income', 'expense'] as const;
 
 export default function Transactions() {
-  const { transactions, deleteTransaction } = useTransactions();
+  const { transactions, deleteTransaction, updateTransaction } = useTransactions();
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
 
   const filtered = transactions.filter((t) => {
     const matchesSearch = t.description.toLowerCase().includes(search.toLowerCase()) ||
@@ -88,7 +93,10 @@ export default function Transactions() {
                 const cat = getCategoryInfo(t.category);
                 return (
                   <div key={t.id} className="group flex items-center justify-between py-3.5">
-                    <div className="flex items-center gap-3 min-w-0">
+                    <div
+                      className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer"
+                      onClick={() => setEditingTransaction(t)}
+                    >
                       <div className="h-9 w-9 rounded-xl bg-muted flex items-center justify-center text-base shrink-0">
                         {cat.icon}
                       </div>
@@ -107,6 +115,14 @@ export default function Transactions() {
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => setEditingTransaction(t)}
+                      >
+                        <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
                         onClick={() => handleDelete(t.id)}
                       >
                         <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
@@ -119,6 +135,105 @@ export default function Transactions() {
           </CardContent>
         </Card>
       )}
+
+      {/* Edit Dialog */}
+      {editingTransaction && (
+        <EditTransactionDialog
+          transaction={editingTransaction}
+          onClose={() => setEditingTransaction(null)}
+          onSave={(updates) => {
+            updateTransaction(editingTransaction.id, updates);
+            setEditingTransaction(null);
+            toast.success('Transaction updated');
+          }}
+          onDelete={() => {
+            handleDelete(editingTransaction.id);
+            setEditingTransaction(null);
+          }}
+        />
+      )}
     </AppLayout>
+  );
+}
+
+function EditTransactionDialog({
+  transaction,
+  onClose,
+  onSave,
+  onDelete,
+}: {
+  transaction: Transaction;
+  onClose: () => void;
+  onSave: (updates: Partial<Transaction>) => void;
+  onDelete: () => void;
+}) {
+  const [type, setType] = useState<TransactionType>(transaction.type);
+  const [amount, setAmount] = useState(transaction.amount);
+  const [description, setDescription] = useState(transaction.description);
+  const [category, setCategory] = useState<CategoryType>(transaction.category);
+  const [date, setDate] = useState(transaction.date.slice(0, 10));
+  const [currency, setCurrency] = useState(transaction.currency);
+
+  const handleSave = () => {
+    if (!description.trim()) return;
+    onSave({ type, amount, description, category, date: new Date(date).toISOString(), currency });
+  };
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent>
+        <DialogHeader><DialogTitle>Edit Transaction</DialogTitle></DialogHeader>
+        <div className="space-y-4 pt-2">
+          <div className="space-y-1.5">
+            <Label>Type</Label>
+            <Select value={type} onValueChange={(v) => setType(v as TransactionType)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="income">Income</SelectItem>
+                <SelectItem value="expense">Expense</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Description</Label>
+            <Input value={description} onChange={(e) => setDescription(e.target.value)} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Amount</Label>
+            <Input type="number" value={amount} onChange={(e) => setAmount(Number(e.target.value))} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Category</Label>
+            <Select value={category} onValueChange={(v) => setCategory(v as CategoryType)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {CATEGORIES.map((c) => (
+                  <SelectItem key={c.value} value={c.value}>
+                    {c.icon} {c.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Date</Label>
+            <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Currency</Label>
+            <Select value={currency} onValueChange={setCurrency}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>{CURRENCIES.map((c) => <SelectItem key={c.code} value={c.code}>{c.symbol} {c.name}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+          <div className="flex gap-2">
+            <Button onClick={handleSave} className="flex-1 rounded-xl h-11">Save Changes</Button>
+            <Button variant="destructive" onClick={onDelete} className="rounded-xl h-11">
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
