@@ -11,7 +11,7 @@ import { useCreditCards } from '@/hooks/useCreditCards';
 import { useAssets } from '@/hooks/useAssets';
 import { formatCurrency, CURRENCIES } from '@/lib/currencies';
 import { BankAccount, CreditCard as CreditCardType, Asset } from '@/types/finance';
-import { Landmark, CreditCard, Gem, Plus, Trash2 } from 'lucide-react';
+import { Landmark, CreditCard as CreditCardIcon, Gem, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function Accounts() {
