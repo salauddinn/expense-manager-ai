@@ -310,6 +310,8 @@ export default function Chat() {
 
   const handleReject = useCallback(
     (msgId: string) => {
+      logger.info('[Chat] Entity rejected');
+      analytics.track('entity_rejected');
       setMessages((prev) =>
         prev.map((m) =>
           m.id === msgId ? { ...m, confirmed: false, content: '❌ Discarded.', parsedIntent: undefined } : m,
