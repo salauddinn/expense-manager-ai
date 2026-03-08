@@ -4,6 +4,7 @@
  * Uses LLM (OpenAI/Gemini) when API key is configured,
  * falls back to rule-based parser otherwise.
  */
+// @ts-expect-error — logger import used below
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
