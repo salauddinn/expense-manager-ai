@@ -194,7 +194,7 @@ function AddCardDialog({ onAdd }: { onAdd: (c: Omit<CreditCard, 'id'>) => void }
   );
 }
 
-function AddAssetDialog({ onAdd }: { onAdd: (a: any) => void }) {
+function AddAssetDialog({ onAdd }: { onAdd: (a: Omit<Asset, 'id'>) => void }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
   const [type, setType] = useState<'property' | 'investment' | 'vehicle' | 'other'>('property');
