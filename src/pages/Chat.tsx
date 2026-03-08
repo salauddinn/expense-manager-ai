@@ -516,12 +516,12 @@ export default function Chat() {
       />
 
       {/* Input bar */}
-      <div className="fixed bottom-14 left-0 right-0 bg-card/95 backdrop-blur-sm px-5 py-3">
+      <div className="fixed bottom-14 left-0 right-0 bg-card/80 backdrop-blur-xl border-t border-border/40 px-5 py-3">
         <div className="mx-auto max-w-2xl flex gap-2">
           <Button
-            variant="outline"
+            variant="ghost"
             size="icon"
-            className="shrink-0"
+            className="shrink-0 rounded-xl h-11 w-11"
             onClick={() => fileInputRef.current?.click()}
             aria-label="Upload receipt"
             disabled={isProcessing}
@@ -534,7 +534,7 @@ export default function Chat() {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={isLLMConfigured ? 'Ask anything about your finances...' : 'Try: spent ₹500 on groceries...'}
-            className="flex-1 rounded-full px-4"
+            className="flex-1 rounded-full px-5 h-11 bg-muted/50"
             disabled={isProcessing}
           />
 
@@ -543,6 +543,7 @@ export default function Chat() {
             size="icon"
             disabled={!input.trim() || isProcessing}
             aria-label="Send message"
+            className="rounded-full h-11 w-11 shadow-md shadow-primary/20"
           >
             {isProcessing ? (
               <Loader2 className="h-4 w-4 animate-spin" />
