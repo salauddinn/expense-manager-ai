@@ -2,7 +2,7 @@
  * Dashboard — Financial overview with net worth, stats, chart, and recent transactions.
  */
 
-import { useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { AlertsBanner } from '@/components/AlertsBanner';
 import { Card, CardContent } from '@/components/ui/card';
