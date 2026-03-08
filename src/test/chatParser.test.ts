@@ -96,8 +96,8 @@ describe('chatParser — parseMessageFull', () => {
       expect(result.data.limit).toBe(200000);
     });
 
-    it('parses credit card with limit and outstanding', () => {
-      const result = parseMessageFull('add ICICI credit card limit 3 lakh outstanding 50000');
+    it('parses credit card with limit and outstanding (same format)', () => {
+      const result = parseMessageFull('add ICICI credit card limit 3 lakh outstanding 50k');
       expect(result.intent).toBe('credit_card');
       if (result.intent !== 'credit_card') return;
       expect(result.data.limit).toBe(300000);
