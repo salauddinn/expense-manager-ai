@@ -154,7 +154,7 @@ function AddBankDialog({ onAdd }: { onAdd: (a: Omit<BankAccount, 'id'>) => void 
   );
 }
 
-function AddCardDialog({ onAdd }: { onAdd: (c: any) => void }) {
+function AddCardDialog({ onAdd }: { onAdd: (c: Omit<CreditCard, 'id'>) => void }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
   const [limit, setLimit] = useState(0);
