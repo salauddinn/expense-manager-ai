@@ -1,9 +1,23 @@
+/**
+ * Finance domain types.
+ *
+ * Central type definitions for all financial entities used across the app.
+ */
+
+// ── Enums & Unions ──
+
 export type TransactionType = 'income' | 'expense';
 
 export type CategoryType =
   | 'food' | 'transport' | 'shopping' | 'bills' | 'entertainment'
   | 'health' | 'education' | 'rent' | 'groceries' | 'travel'
   | 'salary' | 'freelance' | 'investment' | 'gift' | 'refund' | 'other';
+
+export type BankAccountType = 'savings' | 'current' | 'salary';
+
+export type AssetType = 'property' | 'investment' | 'vehicle' | 'other';
+
+// ── Entities ──
 
 export interface Transaction {
   id: string;
@@ -20,7 +34,7 @@ export interface Transaction {
 export interface BankAccount {
   id: string;
   name: string;
-  type: 'savings' | 'current' | 'salary';
+  type: BankAccountType;
   balance: number;
   currency: string;
 }
@@ -47,10 +61,19 @@ export interface Loan {
 export interface Asset {
   id: string;
   name: string;
-  type: 'property' | 'investment' | 'vehicle' | 'other';
+  type: AssetType;
   value: number;
   currency: string;
 }
+
+export interface BudgetGoal {
+  id: string;
+  category: CategoryType;
+  monthlyLimit: number;
+  currency: string;
+}
+
+// ── Chat ──
 
 export interface ChatMessage {
   id: string;
@@ -60,11 +83,4 @@ export interface ChatMessage {
   parsedTransaction?: Partial<Transaction>;
   confirmed?: boolean;
   imageUrl?: string;
-}
-
-export interface BudgetGoal {
-  id: string;
-  category: CategoryType;
-  monthlyLimit: number;
-  currency: string;
 }

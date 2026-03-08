@@ -1,5 +1,22 @@
+/**
+ * Chat Parser — Natural language parser for financial commands.
+ *
+ * Supports 7 intents:
+ *   1. transaction  — "spent ₹500 on groceries"
+ *   2. bank_account — "add SBI savings account 50,000"
+ *   3. credit_card  — "add HDFC credit card limit 2 lakh"
+ *   4. asset        — "add flat worth 50 lakh"
+ *   5. loan         — "home loan 30 lakh at 8.5% for 20 years"
+ *   6. budget       — "set budget for food 5000"
+ *   7. query        — "how much did I spend this month?"
+ */
+
 import { CategoryType, TransactionType } from '@/types/finance';
 import { DEFAULT_CURRENCY } from './currencies';
+
+// ────────────────────────────────────────────────────────────────
+// Types
+// ────────────────────────────────────────────────────────────────
 
 export type ParsedIntent =
   | { intent: 'transaction'; data: ParsedTransaction }
@@ -18,6 +35,7 @@ export interface ParsedTransaction {
   category: CategoryType;
   description: string;
   date: string;
+  receiptUrl?: string;
 }
 
 export interface ParsedBankAccount {
@@ -60,250 +78,422 @@ export interface ParsedBudget {
 export interface ParsedQuery {
   queryType: 'spending' | 'income' | 'balance' | 'summary';
   category?: CategoryType;
-  period?: 'today' | 'this_week' | 'this_month' | 'this_year';
+  period: 'today' | 'this_week' | 'this_month' | 'this_year';
 }
 
-// ── Shared helpers ──
+// ────────────────────────────────────────────────────────────────
+// Constants
+// ────────────────────────────────────────────────────────────────
 
+/** Map currency symbols and common names to ISO codes. */
 const CURRENCY_MAP: Record<string, string> = {
-  '₹': 'INR', 'rs': 'INR', 'inr': 'INR', 'rupees': 'INR', 'rupee': 'INR',
-  '$': 'USD', 'usd': 'USD', 'dollars': 'USD', 'dollar': 'USD',
-  '€': 'EUR', 'eur': 'EUR', 'euros': 'EUR', 'euro': 'EUR',
-  '£': 'GBP', 'gbp': 'GBP', 'pounds': 'GBP', 'pound': 'GBP',
-  '¥': 'JPY', 'jpy': 'JPY', 'yen': 'JPY',
+  '₹': 'INR', rs: 'INR', inr: 'INR', rupees: 'INR', rupee: 'INR',
+  '$': 'USD', usd: 'USD', dollars: 'USD', dollar: 'USD',
+  '€': 'EUR', eur: 'EUR', euros: 'EUR', euro: 'EUR',
+  '£': 'GBP', gbp: 'GBP', pounds: 'GBP', pound: 'GBP',
+  '¥': 'JPY', jpy: 'JPY', yen: 'JPY',
 };
 
+/** Multiplier words (Indian & western conventions). */
 const MULTIPLIERS: Record<string, number> = {
-  lakh: 100000, lakhs: 100000, lac: 100000, lacs: 100000,
-  crore: 10000000, crores: 10000000, cr: 10000000,
-  thousand: 1000, thousands: 1000, k: 1000,
-  million: 1000000, mil: 1000000, m: 1000000,
-  billion: 1000000000, b: 1000000000,
+  lakh: 1e5, lakhs: 1e5, lac: 1e5, lacs: 1e5,
+  crore: 1e7, crores: 1e7, cr: 1e7,
+  thousand: 1e3, thousands: 1e3, k: 1e3,
+  million: 1e6, mil: 1e6, m: 1e6,
+  billion: 1e9, b: 1e9,
 };
 
-const EXPENSE_KEYWORDS = ['spent', 'paid', 'bought', 'expense', 'cost', 'charged', 'bill', 'purchase'];
-const INCOME_KEYWORDS = ['received', 'earned', 'got', 'income', 'salary', 'credited', 'refund'];
+const MULTIPLIER_WORDS = Object.keys(MULTIPLIERS).filter((k) => k.length > 1).join('|');
+const MULTIPLIER_REGEX = new RegExp(
+  `([\\d,]+\\.?\\d*)\\s*(${MULTIPLIER_WORDS})\\b`,
+  'i',
+);
+const MULTIPLIER_REGEX_GLOBAL = new RegExp(
+  `([\\d,]+\\.?\\d*)\\s*(${MULTIPLIER_WORDS}|[kmb])\\b`,
+  'gi',
+);
+const SHORT_MULTIPLIER_REGEX = /([\d,]+\.?\d*)\s?([kmb])\b/i;
+
+const EXPENSE_KEYWORDS = [
+  'spent', 'paid', 'bought', 'expense', 'cost', 'charged', 'bill', 'purchase',
+];
+const INCOME_KEYWORDS = [
+  'received', 'earned', 'got', 'income', 'salary', 'credited', 'refund',
+];
 
 const CATEGORY_KEYWORDS: Record<string, CategoryType> = {
-  grocery: 'groceries', groceries: 'groceries', supermarket: 'groceries', vegetables: 'groceries',
-  food: 'food', restaurant: 'food', dinner: 'food', lunch: 'food', breakfast: 'food', coffee: 'food', cafe: 'food',
-  uber: 'transport', cab: 'transport', taxi: 'transport', fuel: 'transport', petrol: 'transport', gas: 'transport', bus: 'transport', metro: 'transport', train: 'transport',
-  rent: 'rent', housing: 'rent',
-  electricity: 'bills', water: 'bills', internet: 'bills', wifi: 'bills', phone: 'bills', mobile: 'bills', recharge: 'bills',
-  movie: 'entertainment', netflix: 'entertainment', spotify: 'entertainment', game: 'entertainment',
+  // Food & Dining
+  food: 'food', restaurant: 'food', dinner: 'food', lunch: 'food',
+  breakfast: 'food', coffee: 'food', cafe: 'food', snack: 'food', pizza: 'food',
+  biryani: 'food', swiggy: 'food', zomato: 'food',
+  // Groceries
+  grocery: 'groceries', groceries: 'groceries', supermarket: 'groceries',
+  vegetables: 'groceries', fruits: 'groceries', bigbasket: 'groceries',
+  blinkit: 'groceries', zepto: 'groceries',
+  // Transport
+  uber: 'transport', cab: 'transport', taxi: 'transport', fuel: 'transport',
+  petrol: 'transport', diesel: 'transport', gas: 'transport', bus: 'transport',
+  metro: 'transport', train: 'transport', ola: 'transport', rapido: 'transport',
+  parking: 'transport', toll: 'transport',
+  // Housing
+  rent: 'rent', housing: 'rent', maintenance: 'rent', society: 'rent',
+  // Bills & Utilities
+  electricity: 'bills', water: 'bills', internet: 'bills', wifi: 'bills',
+  phone: 'bills', mobile: 'bills', recharge: 'bills', dth: 'bills',
+  broadband: 'bills', jio: 'bills', airtel: 'bills',
+  // Entertainment
+  movie: 'entertainment', netflix: 'entertainment', spotify: 'entertainment',
+  game: 'entertainment', hotstar: 'entertainment', prime: 'entertainment',
+  youtube: 'entertainment', concert: 'entertainment',
+  // Health
   doctor: 'health', medicine: 'health', hospital: 'health', pharmacy: 'health',
-  school: 'education', college: 'education', course: 'education', book: 'education', books: 'education',
-  flight: 'travel', hotel: 'travel', trip: 'travel', travel: 'travel', vacation: 'travel',
-  shopping: 'shopping', clothes: 'shopping', amazon: 'shopping', flipkart: 'shopping', shoes: 'shopping',
-  salary: 'salary', freelance: 'freelance', investment: 'investment', dividend: 'investment',
-  gift: 'gift', refund: 'refund',
+  gym: 'health', fitness: 'health', medical: 'health',
+  // Education
+  school: 'education', college: 'education', course: 'education',
+  book: 'education', books: 'education', tuition: 'education',
+  udemy: 'education', coaching: 'education',
+  // Travel
+  flight: 'travel', hotel: 'travel', trip: 'travel', travel: 'travel',
+  vacation: 'travel', booking: 'travel', airbnb: 'travel',
+  // Shopping
+  shopping: 'shopping', clothes: 'shopping', amazon: 'shopping',
+  flipkart: 'shopping', shoes: 'shopping', myntra: 'shopping',
+  meesho: 'shopping', electronics: 'shopping',
+  // Income categories
+  salary: 'salary', freelance: 'freelance', investment: 'investment',
+  dividend: 'investment', interest: 'investment', gift: 'gift', refund: 'refund',
 };
 
-function extractAmount(message: string): { amount: number | null; currency: string } {
+/** Intent keyword groups — order matters (checked top → bottom). */
+const INTENT_KEYWORDS = {
+  query: [
+    'how much', 'total spent', 'total income', 'total expense',
+    'spending on', 'summary', 'what did i spend', 'show me',
+    'my balance', 'net worth', 'how many',
+  ],
+  bank_account: [
+    'bank account', 'savings account', 'current account', 'salary account',
+    'add account', 'bank balance', 'open account',
+  ],
+  credit_card: [
+    'credit card', 'add card', 'card limit', 'card outstanding',
+  ],
+  asset: [
+    'add asset', 'add property', 'add flat', 'add house', 'add car',
+    'add bike', 'add vehicle', 'add investment', 'property worth',
+    'flat worth', 'house worth', 'car worth', 'investment worth',
+    'add gold', 'add stocks', 'add mutual fund', 'add fd',
+  ],
+  loan: [
+    'add loan', 'home loan', 'car loan', 'personal loan',
+    'education loan', 'loan of', 'loan at', 'student loan',
+    'housing loan', 'vehicle loan',
+  ],
+  budget: [
+    'set budget', 'budget for', 'budget limit', 'monthly budget',
+    'limit for', 'set limit',
+  ],
+} as const;
+
+/** Common Indian bank names used for auto-naming. */
+const BANK_NAMES = [
+  'sbi', 'hdfc', 'icici', 'axis', 'kotak', 'pnb', 'bob', 'yes bank',
+  'idbi', 'canara', 'union', 'indusind', 'federal', 'rbl',
+  'chase', 'bofa', 'wells fargo', 'citi',
+];
+
+/** Card issuer names. */
+const CARD_ISSUERS = [
+  'hdfc', 'icici', 'sbi', 'axis', 'kotak', 'amex', 'citi', 'rbl',
+  'yes bank', 'indusind', 'au', 'idfc', 'visa', 'mastercard',
+];
+
+// ────────────────────────────────────────────────────────────────
+// Amount & Currency Extraction
+// ────────────────────────────────────────────────────────────────
+
+interface AmountResult {
+  amount: number | null;
+  currency: string;
+}
+
+/** Parse a raw number string (e.g. "1,00,000.50") → number. */
+function parseNum(raw: string): number {
+  return parseFloat(raw.replace(/,/g, ''));
+}
+
+/** Extract the first amount + currency found in a message. */
+function extractAmount(message: string): AmountResult {
   let amount: number | null = null;
   let currency = DEFAULT_CURRENCY;
 
-  // Multiplier: 1 lakh, 2.5 crore
-  const multMatch = message.match(/([\d,]+\.?\d*)\s*(lakh|lakhs|lac|lacs|crore|crores|cr|thousand|thousands|million|mil|billion)\b/i);
+  // 1. Multiplier words: "1 lakh", "2.5 crore"
+  const multMatch = message.match(MULTIPLIER_REGEX);
   if (multMatch) {
-    amount = parseFloat(multMatch[1].replace(/,/g, '')) * (MULTIPLIERS[multMatch[2].toLowerCase()] || 1);
+    const multiplier = MULTIPLIERS[multMatch[2].toLowerCase()];
+    amount = parseNum(multMatch[1]) * (multiplier ?? 1);
   }
 
-  // 50k/m/b
-  if (!amount) {
-    const shortMatch = message.match(/([\d,]+\.?\d*)\s?([kmb])\b/i);
+  // 2. Short multiplier: "50k", "2m"
+  if (amount === null) {
+    const shortMatch = message.match(SHORT_MULTIPLIER_REGEX);
     if (shortMatch) {
-      amount = parseFloat(shortMatch[1].replace(/,/g, '')) * (MULTIPLIERS[shortMatch[2].toLowerCase()] || 1);
+      const multiplier = MULTIPLIERS[shortMatch[2].toLowerCase()];
+      amount = parseNum(shortMatch[1]) * (multiplier ?? 1);
     }
   }
 
-  // ₹500, $50
-  if (!amount) {
-    const sym = message.match(/([₹$€£¥])\s*([\d,]+\.?\d*)/);
-    if (sym) {
-      currency = CURRENCY_MAP[sym[1]] || DEFAULT_CURRENCY;
-      amount = parseFloat(sym[2].replace(/,/g, ''));
+  // 3. Currency symbol prefix: "₹500", "$50"
+  if (amount === null) {
+    const symMatch = message.match(/([₹$€£¥])\s*([\d,]+\.?\d*)/);
+    if (symMatch) {
+      currency = CURRENCY_MAP[symMatch[1]] ?? DEFAULT_CURRENCY;
+      amount = parseNum(symMatch[2]);
     }
   }
 
-  // 500 INR
-  if (!amount) {
-    const code = message.match(/([\d,]+\.?\d*)\s*(INR|USD|EUR|GBP|JPY|AED|CAD|AUD|rupees?|dollars?|euros?|pounds?|yen)/i);
-    if (code) {
-      amount = parseFloat(code[1].replace(/,/g, ''));
-      currency = CURRENCY_MAP[code[2].toLowerCase()] || code[2].toUpperCase();
+  // 4. Currency code suffix: "500 INR", "50 dollars"
+  if (amount === null) {
+    const codeMatch = message.match(
+      /([\d,]+\.?\d*)\s*(INR|USD|EUR|GBP|JPY|AED|CAD|AUD|rupees?|dollars?|euros?|pounds?|yen)/i,
+    );
+    if (codeMatch) {
+      amount = parseNum(codeMatch[1]);
+      currency = CURRENCY_MAP[codeMatch[2].toLowerCase()] ?? codeMatch[2].toUpperCase();
     }
   }
 
-  // Rs 500
-  if (!amount) {
-    const rs = message.match(/rs\.?\s*([\d,]+\.?\d*)/i);
-    if (rs) { amount = parseFloat(rs[1].replace(/,/g, '')); currency = 'INR'; }
+  // 5. "Rs" prefix: "Rs 500", "Rs.500"
+  if (amount === null) {
+    const rsMatch = message.match(/rs\.?\s*([\d,]+\.?\d*)/i);
+    if (rsMatch) {
+      amount = parseNum(rsMatch[1]);
+      currency = 'INR';
+    }
   }
 
-  // Plain number
-  if (!amount) {
-    const num = message.match(/(\d[\d,]*\.?\d*)/);
-    if (num) amount = parseFloat(num[1].replace(/,/g, ''));
+  // 6. Fallback: bare number
+  if (amount === null) {
+    const numMatch = message.match(/(\d[\d,]*\.?\d*)/);
+    if (numMatch) {
+      amount = parseNum(numMatch[1]);
+    }
   }
 
-  // Currency from symbol in message
+  // Detect currency symbol anywhere if still default
   if (currency === DEFAULT_CURRENCY) {
-    const sym = message.match(/([₹$€£¥])/);
-    if (sym) currency = CURRENCY_MAP[sym[1]] || DEFAULT_CURRENCY;
+    const symAnywhere = message.match(/([₹$€£¥])/);
+    if (symAnywhere) {
+      currency = CURRENCY_MAP[symAnywhere[1]] ?? DEFAULT_CURRENCY;
+    }
   }
 
   return { amount, currency };
 }
 
+/** Extract ALL numbers from a message (for multi-value fields like limit + outstanding). */
 function extractAllNumbers(message: string): number[] {
-  const nums: number[] = [];
-  // With multipliers
-  const multRegex = /([\d,]+\.?\d*)\s*(lakh|lakhs|lac|lacs|crore|crores|cr|thousand|thousands|million|mil|billion|[kmb])\b/gi;
-  let m;
-  while ((m = multRegex.exec(message)) !== null) {
-    const base = parseFloat(m[1].replace(/,/g, ''));
-    const mult = MULTIPLIERS[m[2].toLowerCase()] || 1;
-    nums.push(base * mult);
-  }
-  if (nums.length > 0) return nums;
+  const numbers: number[] = [];
 
-  // Plain numbers
+  // Try multiplier words first
+  let match: RegExpExecArray | null;
+  const regex = new RegExp(MULTIPLIER_REGEX_GLOBAL.source, 'gi');
+  while ((match = regex.exec(message)) !== null) {
+    const multiplier = MULTIPLIERS[match[2].toLowerCase()] ?? 1;
+    numbers.push(parseNum(match[1]) * multiplier);
+  }
+  if (numbers.length > 0) return numbers;
+
+  // Fallback: plain numbers (with optional currency symbol prefix)
   const plainRegex = /(?:[₹$€£¥]\s*)?([\d,]+\.?\d*)/g;
-  while ((m = plainRegex.exec(message)) !== null) {
-    const val = parseFloat(m[1].replace(/,/g, ''));
-    if (val > 0) nums.push(val);
+  while ((match = plainRegex.exec(message)) !== null) {
+    const val = parseNum(match[1]);
+    if (val > 0) numbers.push(val);
   }
-  return nums;
+  return numbers;
 }
 
-function detectDate(lower: string): string {
-  let date = new Date().toISOString();
-  if (lower.includes('yesterday')) {
-    const d = new Date(); d.setDate(d.getDate() - 1); date = d.toISOString();
+// ────────────────────────────────────────────────────────────────
+// Date & Category Detection
+// ────────────────────────────────────────────────────────────────
+
+/** Detect a relative date from natural language. */
+function detectDate(text: string): string {
+  const now = new Date();
+
+  if (text.includes('yesterday')) {
+    now.setDate(now.getDate() - 1);
+  } else if (text.includes('day before yesterday')) {
+    now.setDate(now.getDate() - 2);
+  } else if (text.includes('last week')) {
+    now.setDate(now.getDate() - 7);
   }
-  return date;
+
+  return now.toISOString();
 }
 
-function detectCategory(lower: string): CategoryType {
-  for (const [keyword, cat] of Object.entries(CATEGORY_KEYWORDS)) {
-    if (lower.includes(keyword)) return cat;
+/** Detect expense/income category from keywords. */
+function detectCategory(text: string): CategoryType {
+  for (const [keyword, category] of Object.entries(CATEGORY_KEYWORDS)) {
+    if (text.includes(keyword)) return category;
   }
   return 'other';
 }
 
-// ── Intent detection ──
+// ────────────────────────────────────────────────────────────────
+// Intent Detection
+// ────────────────────────────────────────────────────────────────
 
-const BANK_KEYWORDS = ['bank account', 'savings account', 'current account', 'salary account', 'add account', 'bank balance', 'open account'];
-const CARD_KEYWORDS = ['credit card', 'add card', 'card limit', 'card outstanding'];
-const ASSET_KEYWORDS = ['add asset', 'add property', 'add flat', 'add house', 'add car', 'add bike', 'add vehicle', 'add investment', 'property worth', 'flat worth', 'house worth', 'car worth', 'investment worth'];
-const LOAN_KEYWORDS = ['add loan', 'home loan', 'car loan', 'personal loan', 'education loan', 'loan of', 'loan at'];
-const BUDGET_KEYWORDS = ['set budget', 'budget for', 'budget limit', 'monthly budget', 'limit for', 'set limit'];
-const QUERY_KEYWORDS = ['how much', 'total spent', 'total income', 'total expense', 'spending on', 'summary', 'what did i spend', 'show me', 'my balance', 'net worth'];
+type IntentType = keyof typeof INTENT_KEYWORDS | 'transaction';
 
-function detectIntent(lower: string): string {
-  if (QUERY_KEYWORDS.some((k) => lower.includes(k))) return 'query';
-  if (BANK_KEYWORDS.some((k) => lower.includes(k))) return 'bank_account';
-  if (CARD_KEYWORDS.some((k) => lower.includes(k))) return 'credit_card';
-  if (ASSET_KEYWORDS.some((k) => lower.includes(k))) return 'asset';
-  if (LOAN_KEYWORDS.some((k) => lower.includes(k))) return 'loan';
-  if (BUDGET_KEYWORDS.some((k) => lower.includes(k))) return 'budget';
+/** Determine the user's intent from their message. */
+function detectIntent(text: string): IntentType {
+  for (const [intent, keywords] of Object.entries(INTENT_KEYWORDS)) {
+    if (keywords.some((kw) => text.includes(kw))) {
+      return intent as IntentType;
+    }
+  }
   return 'transaction';
 }
 
-// ── Parsers per intent ──
+// ────────────────────────────────────────────────────────────────
+// Per-Intent Parsers
+// ────────────────────────────────────────────────────────────────
+
+/** Find a matching name from a list of known names in the text. */
+function findKnownName(text: string, names: string[], suffix: string): string | null {
+  for (const name of names) {
+    if (text.includes(name)) {
+      return name.toUpperCase() + ' ' + suffix;
+    }
+  }
+  return null;
+}
+
+/** Capitalize first letter. */
+function capitalize(str: string): string {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
 
 function parseBankAccount(message: string, lower: string): ParsedBankAccount | null {
   const { amount, currency } = extractAmount(message);
   if (!amount) return null;
 
-  let type: 'savings' | 'current' | 'salary' = 'savings';
-  if (lower.includes('current')) type = 'current';
-  else if (lower.includes('salary')) type = 'salary';
+  const accountType: 'savings' | 'current' | 'salary' = lower.includes('current')
+    ? 'current'
+    : lower.includes('salary')
+      ? 'salary'
+      : 'savings';
 
-  // Try to extract name (common bank names)
-  const bankNames = ['sbi', 'hdfc', 'icici', 'axis', 'kotak', 'pnb', 'bob', 'yes bank', 'idbi', 'canara', 'union', 'indusind', 'federal', 'rbl', 'chase', 'bofa', 'wells fargo', 'citi'];
-  let name = type.charAt(0).toUpperCase() + type.slice(1) + ' Account';
-  for (const bank of bankNames) {
-    if (lower.includes(bank)) {
-      name = bank.toUpperCase() + ' ' + type.charAt(0).toUpperCase() + type.slice(1);
-      break;
-    }
-  }
+  const name = findKnownName(lower, BANK_NAMES, capitalize(accountType))
+    ?? `${capitalize(accountType)} Account`;
 
-  return { name, type, balance: amount, currency };
+  return { name, type: accountType, balance: amount, currency };
 }
 
 function parseCreditCard(message: string, lower: string): ParsedCreditCard | null {
-  const nums = extractAllNumbers(message);
-  if (nums.length === 0) return null;
+  const numbers = extractAllNumbers(message);
+  if (numbers.length === 0) return null;
 
-  const cardNames = ['hdfc', 'icici', 'sbi', 'axis', 'kotak', 'amex', 'citi', 'rbl', 'yes bank', 'indusind', 'au', 'idfc', 'visa', 'mastercard'];
-  let name = 'Credit Card';
-  for (const cn of cardNames) {
-    if (lower.includes(cn)) { name = cn.toUpperCase() + ' Card'; break; }
-  }
-
+  const name = findKnownName(lower, CARD_ISSUERS, 'Card') ?? 'Credit Card';
   const { currency } = extractAmount(message);
-  const limit = nums[0] || 0;
-  const outstanding = nums.length > 1 ? nums[1] : 0;
 
-  return { name, limit, outstanding, dueDate: new Date().toISOString(), currency };
+  return {
+    name,
+    limit: numbers[0],
+    outstanding: numbers[1] ?? 0,
+    dueDate: new Date().toISOString(),
+    currency,
+  };
 }
 
 function parseAsset(message: string, lower: string): ParsedAsset | null {
   const { amount, currency } = extractAmount(message);
   if (!amount) return null;
 
-  let type: 'property' | 'investment' | 'vehicle' | 'other' = 'other';
+  // Determine asset type and default name
+  const assetTypeMap: [string[], 'property' | 'investment' | 'vehicle', string][] = [
+    [['flat', 'house', 'property', 'apartment', 'plot', 'land'], 'property', 'Property'],
+    [['car', 'bike', 'vehicle', 'scooter', 'two wheeler'], 'vehicle', 'Vehicle'],
+    [['gold'], 'investment', 'Gold'],
+    [['stock', 'stocks', 'shares'], 'investment', 'Stocks'],
+    [['mutual fund', 'mf', 'sip'], 'investment', 'Mutual Fund'],
+    [['fd', 'fixed deposit'], 'investment', 'Fixed Deposit'],
+    [['ppf', 'epf', 'pf'], 'investment', 'Provident Fund'],
+    [['investment'], 'investment', 'Investment'],
+  ];
+
+  let assetType: ParsedAsset['type'] = 'other';
   let name = 'Asset';
-  if (lower.includes('flat') || lower.includes('house') || lower.includes('property') || lower.includes('apartment')) {
-    type = 'property'; name = 'Property';
-  } else if (lower.includes('car') || lower.includes('bike') || lower.includes('vehicle') || lower.includes('scooter')) {
-    type = 'vehicle'; name = 'Vehicle';
-  } else if (lower.includes('investment') || lower.includes('mutual fund') || lower.includes('stock') || lower.includes('fd') || lower.includes('gold')) {
-    type = 'investment'; name = 'Investment';
-    if (lower.includes('gold')) name = 'Gold';
-    if (lower.includes('stock')) name = 'Stocks';
-    if (lower.includes('mutual fund') || lower.includes('mf')) name = 'Mutual Fund';
-    if (lower.includes('fd')) name = 'Fixed Deposit';
+
+  for (const [keywords, type, defaultName] of assetTypeMap) {
+    if (keywords.some((kw) => lower.includes(kw))) {
+      assetType = type;
+      name = defaultName;
+      break;
+    }
   }
 
-  // Try to grab a descriptive name
-  const worth = message.match(/(?:add|my)\s+(.+?)(?:\s+worth|\s+valued|\s+of|\s+at|\s+₹|\s+\$|\s+\d)/i);
-  if (worth) name = worth[1].trim().replace(/^(add|my)\s+/i, '');
-  if (name.length > 30) name = name.substring(0, 30);
-  if (!name || name.length < 2) name = type.charAt(0).toUpperCase() + type.slice(1);
+  // Try to extract a custom name: "add <name> worth ..."
+  const customNameMatch = message.match(
+    /(?:add|my)\s+(.+?)(?:\s+worth|\s+valued|\s+of|\s+at|\s+₹|\s+\$|\s+\d)/i,
+  );
+  if (customNameMatch) {
+    const extracted = customNameMatch[1].trim().replace(/^(add|my)\s+/i, '');
+    if (extracted.length >= 2 && extracted.length <= 30) {
+      name = extracted;
+    }
+  }
 
-  return { name, type, value: amount, currency };
+  return { name, type: assetType, value: amount, currency };
 }
 
 function parseLoan(message: string, lower: string): ParsedLoan | null {
-  const nums = extractAllNumbers(message);
-  if (nums.length === 0) return null;
+  const numbers = extractAllNumbers(message);
+  if (numbers.length === 0) return null;
+
+  // Determine loan name
+  const loanNameMap: [string[], string][] = [
+    [['home loan', 'housing loan'], 'Home Loan'],
+    [['car loan', 'vehicle loan'], 'Car Loan'],
+    [['personal loan'], 'Personal Loan'],
+    [['education loan', 'student loan'], 'Education Loan'],
+    [['gold loan'], 'Gold Loan'],
+    [['business loan'], 'Business Loan'],
+  ];
 
   let name = 'Loan';
-  if (lower.includes('home loan') || lower.includes('housing loan')) name = 'Home Loan';
-  else if (lower.includes('car loan') || lower.includes('vehicle loan')) name = 'Car Loan';
-  else if (lower.includes('personal loan')) name = 'Personal Loan';
-  else if (lower.includes('education loan') || lower.includes('student loan')) name = 'Education Loan';
+  for (const [keywords, loanName] of loanNameMap) {
+    if (keywords.some((kw) => lower.includes(kw))) {
+      name = loanName;
+      break;
+    }
+  }
 
   const { currency } = extractAmount(message);
-  const principal = nums[0];
+  const principal = numbers[0];
 
-  // Try to find rate (look for % or "at X%")
-  let rate = 8.5; // default
+  // Interest rate — look for "X%" or "at X%"
   const rateMatch = message.match(/([\d.]+)\s*%/);
-  if (rateMatch) rate = parseFloat(rateMatch[1]);
+  const rate = rateMatch ? parseFloat(rateMatch[1]) : 8.5;
 
-  // Tenure: "for X years" or "X months"
-  let tenureMonths = 60; // default 5 years
+  // Tenure — "for X years" or "X months"
   const yearsMatch = lower.match(/(\d+)\s*(?:years?|yrs?)/);
   const monthsMatch = lower.match(/(\d+)\s*(?:months?|mos?)/);
-  if (yearsMatch) tenureMonths = parseInt(yearsMatch[1]) * 12;
-  else if (monthsMatch) tenureMonths = parseInt(monthsMatch[1]);
+  const tenureMonths = yearsMatch
+    ? parseInt(yearsMatch[1], 10) * 12
+    : monthsMatch
+      ? parseInt(monthsMatch[1], 10)
+      : 60; // Default: 5 years
 
-  return { name, principal, rate, tenureMonths, startDate: new Date().toISOString(), currency };
+  return {
+    name,
+    principal,
+    rate,
+    tenureMonths,
+    startDate: new Date().toISOString(),
+    currency,
+  };
 }
 
 function parseBudget(lower: string): ParsedBudget | null {
@@ -314,91 +504,114 @@ function parseBudget(lower: string): ParsedBudget | null {
 }
 
 function parseQuery(lower: string): ParsedQuery {
-  let queryType: ParsedQuery['queryType'] = 'summary';
-  if (lower.includes('spent') || lower.includes('spend') || lower.includes('expense')) queryType = 'spending';
-  else if (lower.includes('income') || lower.includes('earn')) queryType = 'income';
-  else if (lower.includes('balance') || lower.includes('net worth')) queryType = 'balance';
+  // Query type
+  const queryType: ParsedQuery['queryType'] =
+    lower.includes('spent') || lower.includes('spend') || lower.includes('expense')
+      ? 'spending'
+      : lower.includes('income') || lower.includes('earn')
+        ? 'income'
+        : lower.includes('balance') || lower.includes('net worth')
+          ? 'balance'
+          : 'summary';
 
-  let period: ParsedQuery['period'] = 'this_month';
-  if (lower.includes('today')) period = 'today';
-  else if (lower.includes('this week') || lower.includes('week')) period = 'this_week';
-  else if (lower.includes('this year') || lower.includes('year')) period = 'this_year';
+  // Time period
+  const period: ParsedQuery['period'] =
+    lower.includes('today')
+      ? 'today'
+      : lower.includes('this week') || lower.includes('week')
+        ? 'this_week'
+        : lower.includes('this year') || lower.includes('year')
+          ? 'this_year'
+          : 'this_month';
 
   const category = detectCategory(lower);
 
-  return { queryType, category: category !== 'other' ? category : undefined, period };
-}
-
-// ── Main parser (backward-compatible) ──
-
-// Legacy interface for existing transaction-only callers
-interface LegacyParsedResult {
-  type: TransactionType;
-  amount: number | null;
-  currency: string;
-  category: CategoryType;
-  description: string;
-  date: string;
-}
-
-export function parseMessage(message: string): LegacyParsedResult {
-  const result = parseMessageFull(message);
-  if (result.intent === 'transaction' && result.data) {
-    return result.data;
-  }
-  // Fallback for non-transaction intents
-  const { amount, currency } = extractAmount(message);
   return {
-    type: 'expense',
-    amount,
-    currency,
-    category: 'other',
-    description: message,
-    date: new Date().toISOString(),
+    queryType,
+    category: category !== 'other' ? category : undefined,
+    period,
   };
 }
 
+function parseTransaction(
+  message: string,
+  lower: string,
+): ParsedTransaction | null {
+  const isIncome = INCOME_KEYWORDS.some((kw) => lower.includes(kw));
+  const isExpense = EXPENSE_KEYWORDS.some((kw) => lower.includes(kw));
+  const type: TransactionType = isIncome && !isExpense ? 'income' : 'expense';
+
+  const { amount, currency } = extractAmount(message);
+  if (!amount) return null;
+
+  return {
+    type,
+    amount,
+    currency,
+    category: detectCategory(lower),
+    description: message,
+    date: detectDate(lower),
+  };
+}
+
+// ────────────────────────────────────────────────────────────────
+// Public API
+// ────────────────────────────────────────────────────────────────
+
+/** Parse a message into a fully-typed intent result. */
 export function parseMessageFull(message: string): ParsedIntent {
-  const lower = message.toLowerCase();
+  const lower = message.toLowerCase().trim();
   const intent = detectIntent(lower);
 
-  switch (intent) {
-    case 'bank_account': {
+  const parsers: Record<string, () => ParsedIntent> = {
+    bank_account: () => {
       const data = parseBankAccount(message, lower);
       return data ? { intent: 'bank_account', data } : { intent: 'unknown', data: null };
-    }
-    case 'credit_card': {
+    },
+    credit_card: () => {
       const data = parseCreditCard(message, lower);
       return data ? { intent: 'credit_card', data } : { intent: 'unknown', data: null };
-    }
-    case 'asset': {
+    },
+    asset: () => {
       const data = parseAsset(message, lower);
       return data ? { intent: 'asset', data } : { intent: 'unknown', data: null };
-    }
-    case 'loan': {
+    },
+    loan: () => {
       const data = parseLoan(message, lower);
       return data ? { intent: 'loan', data } : { intent: 'unknown', data: null };
-    }
-    case 'budget': {
+    },
+    budget: () => {
       const data = parseBudget(lower);
       return data ? { intent: 'budget', data } : { intent: 'unknown', data: null };
-    }
-    case 'query': {
-      return { intent: 'query', data: parseQuery(lower) };
-    }
-    default: {
-      // Transaction
-      const isIncome = INCOME_KEYWORDS.some((k) => lower.includes(k));
-      const isExpense = EXPENSE_KEYWORDS.some((k) => lower.includes(k));
-      const type: TransactionType = isIncome && !isExpense ? 'income' : 'expense';
-      const { amount, currency } = extractAmount(message);
-      const category = detectCategory(lower);
-      const date = detectDate(lower);
-      if (!amount) return { intent: 'unknown', data: null };
-      return {
-        intent: 'transaction',
-        data: { type, amount, currency, category, description: message, date },
-      };
-    }
+    },
+    query: () => ({ intent: 'query', data: parseQuery(lower) }),
+    transaction: () => {
+      const data = parseTransaction(message, lower);
+      return data ? { intent: 'transaction', data } : { intent: 'unknown', data: null };
+    },
+  };
+
+  return parsers[intent]();
+}
+
+/**
+ * Legacy parser — returns a flat transaction result for backward compatibility.
+ * @deprecated Use `parseMessageFull` for new code.
+ */
+export function parseMessage(message: string) {
+  const result = parseMessageFull(message);
+
+  if (result.intent === 'transaction') {
+    return result.data;
   }
+
+  const { amount, currency } = extractAmount(message);
+  return {
+    type: 'expense' as TransactionType,
+    amount,
+    currency,
+    category: 'other' as CategoryType,
+    description: message,
+    date: new Date().toISOString(),
+  };
 }
