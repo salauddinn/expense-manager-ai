@@ -297,6 +297,7 @@ export default function Chat() {
       }
 
       const successMsg = successMessages[intent.intent] ?? '✅ Saved!';
+      analytics.track('entity_confirmed', { intent: intent.intent });
       setMessages((prev) =>
         prev.map((m) => m.id === msg.id ? { ...m, confirmed: true, content: successMsg } : m),
       );
