@@ -117,7 +117,7 @@ export default function Landing() {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link to="/">
+            <Link to="/dashboard">
               <Button size="lg" className="rounded-full px-8 h-12 text-base gap-2 shadow-xl shadow-primary/25 hover:shadow-2xl hover:shadow-primary/30 transition-all">
                 Get Started — It's Free <ArrowRight className="h-4 w-4" />
               </Button>
