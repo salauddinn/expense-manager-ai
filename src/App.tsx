@@ -8,6 +8,7 @@ import Chat from "./pages/Chat";
 import Transactions from "./pages/Transactions";
 import LoanCalculator from "./pages/LoanCalculator";
 import Accounts from "./pages/Accounts";
+import AccountDetail from "./pages/AccountDetail";
 import Budget from "./pages/Budget";
 import Insights from "./pages/Insights";
 import Goals from "./pages/Goals";
