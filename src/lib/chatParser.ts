@@ -44,7 +44,7 @@ export interface ParsedTransaction {
 
 export interface ParsedBankAccount {
   name: string;
-  type: 'savings' | 'current' | 'salary';
+  type: 'savings' | 'current' | 'salary' | 'cash';
   balance: number;
   currency: string;
 }
@@ -178,6 +178,7 @@ const INTENT_KEYWORDS = {
   ],
   bank_account: [
     'bank account', 'savings account', 'current account', 'salary account',
+    'cash account', 'cash wallet', 'cash in hand',
     'add account', 'bank balance', 'open account',
   ],
   credit_card: [
@@ -395,11 +396,13 @@ function parseBankAccount(message: string, lower: string): ParsedBankAccount | n
   const { amount, currency } = extractAmount(message);
   if (!amount) return null;
 
-  const accountType: 'savings' | 'current' | 'salary' = lower.includes('current')
-    ? 'current'
-    : lower.includes('salary')
-      ? 'salary'
-      : 'savings';
+  const accountType: 'savings' | 'current' | 'salary' | 'cash' = lower.includes('cash')
+    ? 'cash'
+    : lower.includes('current')
+      ? 'current'
+      : lower.includes('salary')
+        ? 'salary'
+        : 'savings';
 
   const name = findKnownName(lower, BANK_NAMES, capitalize(accountType))
     ?? `${capitalize(accountType)} Account`;

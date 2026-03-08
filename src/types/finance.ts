@@ -13,7 +13,7 @@ export type CategoryType =
   | 'health' | 'education' | 'rent' | 'groceries' | 'travel'
   | 'salary' | 'freelance' | 'investment' | 'gift' | 'refund' | 'other';
 
-export type BankAccountType = 'savings' | 'current' | 'salary';
+export type BankAccountType = 'savings' | 'current' | 'salary' | 'cash';
 
 export type AssetType = 'property' | 'investment' | 'vehicle' | 'other';
 

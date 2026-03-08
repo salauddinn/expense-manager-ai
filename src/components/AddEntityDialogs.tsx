@@ -19,7 +19,7 @@ import { toast } from 'sonner';
 export function AddBankDialog({ onAdd }: { onAdd: (a: Omit<BankAccount, 'id'>) => void }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
-  const [type, setType] = useState<'savings' | 'current' | 'salary'>('savings');
+  const [type, setType] = useState<'savings' | 'current' | 'salary' | 'cash'>('savings');
   const [balance, setBalance] = useState(0);
   const [currency, setCurrency] = useState('INR');
 
@@ -52,6 +52,7 @@ export function AddBankDialog({ onAdd }: { onAdd: (a: Omit<BankAccount, 'id'>) =
                 <SelectItem value="savings">Savings</SelectItem>
                 <SelectItem value="current">Current</SelectItem>
                 <SelectItem value="salary">Salary</SelectItem>
+                <SelectItem value="cash">Cash</SelectItem>
               </SelectContent>
             </Select>
           </Field>
