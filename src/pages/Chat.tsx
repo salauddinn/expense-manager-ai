@@ -474,10 +474,10 @@ export default function Chat() {
 
   return (
     <AppLayout>
-      <div className="flex items-center gap-2 mb-1">
-        <h1 className="text-xl font-semibold text-foreground">Chat</h1>
+      <div className="flex items-center gap-2.5 mb-1">
+        <h1 className="text-xl font-bold text-foreground tracking-tight">Chat</h1>
         {isLLMConfigured && (
-          <span className="inline-flex items-center gap-1 text-[10px] font-medium bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+          <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-primary/10 text-primary px-2.5 py-0.5 rounded-full">
             <Sparkles className="h-3 w-3" /> AI
           </span>
         )}
