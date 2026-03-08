@@ -23,7 +23,7 @@ import { callLLM, mapLLMResultToIntent } from '@/lib/llmService';
 import { formatCurrency } from '@/lib/currencies';
 import { getCategoryInfo } from '@/lib/categories';
 import { CategoryType } from '@/types/finance';
-import { Send, Check, X, ImagePlus, Sparkles, Loader2 } from 'lucide-react';
+import { Send, Check, X, ImagePlus, Sparkles, Loader2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   startOfDay, startOfWeek, startOfMonth, startOfYear, isAfter,
