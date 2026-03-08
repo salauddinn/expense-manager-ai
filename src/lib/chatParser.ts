@@ -36,6 +36,10 @@ export interface ParsedTransaction {
   description: string;
   date: string;
   receiptUrl?: string;
+  /** Source account/card name detected from "from ..." clause */
+  sourceName?: string;
+  /** Whether the source is a credit card (vs bank account) */
+  sourceIsCard?: boolean;
 }
 
 export interface ParsedBankAccount {
