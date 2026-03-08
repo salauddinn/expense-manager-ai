@@ -9,7 +9,6 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
 import { useTransactions } from '@/hooks/useTransactions';
 import { useBankAccounts } from '@/hooks/useBankAccounts';
 import { useCreditCards } from '@/hooks/useCreditCards';
@@ -22,79 +21,13 @@ import { parseMessageFull, ParsedIntent } from '@/lib/chatParser';
 import { callLLM, mapLLMResultToIntent } from '@/lib/llmService';
 import { formatCurrency } from '@/lib/currencies';
 import { getCategoryInfo } from '@/lib/categories';
-import { CategoryType } from '@/types/finance';
-import { Send, Check, X, ImagePlus, Sparkles, Loader2, Trash2 } from 'lucide-react';
-import { toast } from 'sonner';
+import { answerQuery } from '@/lib/queryEngine';
 import {
-  startOfDay, startOfWeek, startOfMonth, startOfYear, isAfter,
-} from 'date-fns';
-
-// ────────────────────────────────────────────────────────────────
-// Types
-// ────────────────────────────────────────────────────────────────
-
-interface ChatMessage {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: string;
-  imageUrl?: string;
-  parsedIntent?: ParsedIntent;
-  confirmed?: boolean;
-  isLoading?: boolean;
-}
-
-// ────────────────────────────────────────────────────────────────
-// Constants
-// ────────────────────────────────────────────────────────────────
-
-const EXAMPLES = [
-  { emoji: '💸', text: '"spent ₹500 on groceries"' },
-  { emoji: '🏦', text: '"add SBI savings account 50,000"' },
-  { emoji: '💳', text: '"add HDFC credit card limit 2 lakh"' },
-  { emoji: '🏠', text: '"add flat worth 50 lakh"' },
-  { emoji: '💰', text: '"home loan 30 lakh at 8.5% for 20 years"' },
-  { emoji: '🎯', text: '"set budget for food 5000"' },
-  { emoji: '📊', text: '"how much did I spend this month?"' },
-];
-
-const HELP_TEXT = `I couldn't understand that. Try:
-• "spent ₹500 on groceries"
-• "add SBI savings account 50000"
-• "add HDFC credit card limit 2 lakh outstanding 15k"
-• "add flat worth 50 lakh"
-• "home loan 30 lakh at 8.5% for 20 years"
-• "set budget for food 5000"
-• "how much did I spend this month?"`;
-
-// ────────────────────────────────────────────────────────────────
-// Helpers
-// ────────────────────────────────────────────────────────────────
-
-function createMessage(
-  role: ChatMessage['role'],
-  content: string,
-  extras?: Partial<ChatMessage>,
-): ChatMessage {
-  return {
-    id: crypto.randomUUID(),
-    role,
-    content,
-    timestamp: new Date().toISOString(),
-    ...extras,
-  };
-}
-
-const PERIOD_LABELS: Record<string, string> = {
-  today: 'today',
-  this_week: 'this week',
-  this_month: 'this month',
-  this_year: 'this year',
-};
-
-// ────────────────────────────────────────────────────────────────
-// Component
-// ────────────────────────────────────────────────────────────────
+  ChatMessage, createMessage, needsConfirmation,
+  HELP_TEXT, EmptyState, MessageBubble,
+} from '@/components/ChatComponents';
+import { Send, ImagePlus, Sparkles, Loader2, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function Chat() {
   const [messages, setMessages] = useLocalStorage<ChatMessage[]>('finance_chat_messages', []);
@@ -110,10 +43,18 @@ export default function Chat() {
   const { addGoal } = useBudgetGoals();
   const { settings: llmSettings, isConfigured: isLLMConfigured } = useLLMSettings();
 
-  /**
-   * Match a parsed source name (e.g. "hdfc 2427") to an existing account or card.
-   * Returns linked IDs for the transaction.
-   */
+  // Refs
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  // ── Helpers ──
+
+  const financialData = { transactions, accounts, cards, loans, assets };
+
   const resolveLinkedSource = useCallback(
     (sourceName?: string, sourceIsCard?: boolean): { linkedAccountId?: string; linkedCardId?: string } => {
       if (!sourceName) return {};
@@ -124,93 +65,15 @@ export default function Chat() {
         return match ? { linkedCardId: match.id } : {};
       }
 
-      // Try bank accounts first
       const accountMatch = accounts.find((a) => a.name.toLowerCase().includes(lower) || lower.includes(a.name.toLowerCase()));
       if (accountMatch) return { linkedAccountId: accountMatch.id };
 
-      // Fallback: try cards too (user might say "from hdfc" meaning card)
       const cardMatch = cards.find((c) => c.name.toLowerCase().includes(lower) || lower.includes(c.name.toLowerCase()));
       if (cardMatch) return { linkedCardId: cardMatch.id };
 
       return {};
     },
     [accounts, cards],
-  );
-
-  // Refs
-  const bottomRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
-  // ── Query answering (used by rule-based parser and LLM query fallback) ──
-
-  const answerQuery = useCallback(
-    (query: { queryType: string; category?: string; period?: string }): string => {
-      const now = new Date();
-      const periodStart = {
-        today: startOfDay(now),
-        this_week: startOfWeek(now),
-        this_year: startOfYear(now),
-        this_month: startOfMonth(now),
-      }[query.period ?? 'this_month'] ?? startOfMonth(now);
-
-      const periodLabel = PERIOD_LABELS[query.period ?? 'this_month'] ?? 'this month';
-
-      if (query.queryType === 'balance') {
-        const bankTotal = accounts.reduce((sum, a) => sum + a.balance, 0);
-        const cardDebt = cards.reduce((sum, c) => sum + c.outstanding, 0);
-        const loanDebt = loans.reduce((sum, l) => sum + l.principal, 0);
-        const assetTotal = assets.reduce((sum, a) => sum + a.value, 0);
-        const netWorth = bankTotal + assetTotal - cardDebt - loanDebt;
-
-        return [
-          '💰 **Your Financial Summary**\n',
-          `🏦 Bank Balance: **${formatCurrency(bankTotal, 'INR')}**`,
-          `💳 Credit Debt: **${formatCurrency(cardDebt, 'INR')}**`,
-          `🏠 Assets: **${formatCurrency(assetTotal, 'INR')}**`,
-          `📋 Loans: **${formatCurrency(loanDebt, 'INR')}**`,
-          '',
-          `**Net Worth: ${formatCurrency(Math.abs(netWorth), 'INR')}** ${netWorth < 0 ? '(negative)' : ''}`,
-        ].join('\n');
-      }
-
-      const filtered = transactions.filter((t) => {
-        const date = new Date(t.date);
-        return (
-          isAfter(date, periodStart) &&
-          (query.queryType === 'spending' ? t.type === 'expense' :
-           query.queryType === 'income' ? t.type === 'income' : true) &&
-          (query.category ? t.category === query.category : true)
-        );
-      });
-
-      const total = filtered.reduce((sum, t) => sum + t.amount, 0);
-      const catLabel = query.category
-        ? ` on **${getCategoryInfo(query.category as CategoryType).label}**`
-        : '';
-
-      if (query.queryType === 'spending') {
-        return `📊 You spent **${formatCurrency(total, 'INR')}**${catLabel} ${periodLabel} across **${filtered.length}** transactions.`;
-      }
-      if (query.queryType === 'income') {
-        return `📈 You earned **${formatCurrency(total, 'INR')}** ${periodLabel} across **${filtered.length}** transactions.`;
-      }
-
-      const income = filtered.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0);
-      const expense = filtered.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
-
-      return [
-        `📊 **Summary for ${periodLabel}**\n`,
-        `📈 Income: **${formatCurrency(income, 'INR')}**`,
-        `📉 Expenses: **${formatCurrency(expense, 'INR')}**`,
-        `💰 Net: **${formatCurrency(income - expense, 'INR')}**`,
-        `📝 Transactions: **${filtered.length}**`,
-      ].join('\n');
-    },
-    [transactions, accounts, cards, loans, assets],
   );
 
   // ── Build response from parsed intent (rule-based) ──
@@ -265,12 +128,12 @@ export default function Chat() {
           };
         }
         case 'query':
-          return { content: answerQuery(parsed.data) };
+          return { content: answerQuery(parsed.data, financialData) };
         default:
           return { content: HELP_TEXT };
       }
     },
-    [answerQuery],
+    [financialData],
   );
 
   // ── Process with LLM ──
@@ -278,62 +141,34 @@ export default function Chat() {
   const processWithLLM = useCallback(
     async (text: string, loadingMsgId: string, imageUrl?: string) => {
       try {
-        const result = await callLLM(
-          llmSettings.provider,
-          llmSettings.apiKey,
-          llmSettings.model,
-          text,
-        );
-
+        const result = await callLLM(llmSettings.provider, llmSettings.apiKey, llmSettings.model, text);
         const mapped = mapLLMResultToIntent(result);
 
-        // For queries, use the LLM's natural language response directly
         if (mapped.intent === 'query') {
-          // Use LLM message if available, otherwise fall back to our query engine
-          const content = result.message || answerQuery(mapped.data as any);
+          const content = result.message || answerQuery(mapped.data as any, financialData);
           setMessages((prev) =>
-            prev.map((m) =>
-              m.id === loadingMsgId
-                ? { ...m, content, isLoading: false, confirmed: false }
-                : m,
-            ),
+            prev.map((m) => m.id === loadingMsgId ? { ...m, content, isLoading: false, confirmed: false } : m),
           );
           return;
         }
 
         if (mapped.intent === 'unknown') {
           setMessages((prev) =>
-            prev.map((m) =>
-              m.id === loadingMsgId
-                ? { ...m, content: result.message || HELP_TEXT, isLoading: false, confirmed: false }
-                : m,
-            ),
+            prev.map((m) => m.id === loadingMsgId ? { ...m, content: result.message || HELP_TEXT, isLoading: false, confirmed: false } : m),
           );
           return;
         }
 
-        // Actionable intent — show confirmation
         const parsedIntent = mapped as ParsedIntent;
         if (parsedIntent.intent === 'transaction' && imageUrl) {
           (parsedIntent.data as any).receiptUrl = imageUrl;
         }
 
         setMessages((prev) =>
-          prev.map((m) =>
-            m.id === loadingMsgId
-              ? {
-                  ...m,
-                  content: result.message,
-                  isLoading: false,
-                  parsedIntent,
-                  confirmed: undefined,
-                }
-              : m,
-          ),
+          prev.map((m) => m.id === loadingMsgId ? { ...m, content: result.message, isLoading: false, parsedIntent, confirmed: undefined } : m),
         );
       } catch (error) {
-        const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-        console.error('LLM error:', errorMsg);
+        console.error('LLM error:', error instanceof Error ? error.message : error);
 
         // Fallback to rule-based parser
         const parsed = parseMessageFull(text);
@@ -358,7 +193,7 @@ export default function Chat() {
         setIsProcessing(false);
       }
     },
-    [llmSettings, answerQuery, buildResponse, setMessages],
+    [llmSettings, financialData, buildResponse, setMessages],
   );
 
   // ── Send message ──
@@ -380,7 +215,6 @@ export default function Chat() {
         return;
       }
 
-      // LLM path — async with loading state
       if (isLLMConfigured) {
         const loadingMsg = createMessage('assistant', 'Thinking...', { isLoading: true });
         setMessages((prev) => [...prev, userMsg, loadingMsg]);
@@ -390,7 +224,7 @@ export default function Chat() {
         return;
       }
 
-      // Rule-based path — instant
+      // Rule-based path
       const parsed = parseMessageFull(text);
       const { content, parsedIntent } = buildResponse(parsed, imageUrl);
       const isActionable = parsed.intent !== 'query' && parsed.intent !== 'unknown';
@@ -428,7 +262,6 @@ export default function Chat() {
           const linkedIds = resolveLinkedSource(sourceName, sourceIsCard);
           addTransaction({ type, amount, currency, category, description, date, receiptUrl, ...linkedIds });
 
-          // Auto-update linked account/card balance
           if (linkedIds.linkedAccountId) {
             const delta = type === 'expense' ? -amount : amount;
             const account = accounts.find((a) => a.id === linkedIds.linkedAccountId);
@@ -462,9 +295,7 @@ export default function Chat() {
 
       const successMsg = successMessages[intent.intent] ?? '✅ Saved!';
       setMessages((prev) =>
-        prev.map((m) =>
-          m.id === msg.id ? { ...m, confirmed: true, content: successMsg } : m,
-        ),
+        prev.map((m) => m.id === msg.id ? { ...m, confirmed: true, content: successMsg } : m),
       );
       toast.success(successMsg.replace('✅ ', ''));
     },
@@ -475,9 +306,7 @@ export default function Chat() {
     (msgId: string) => {
       setMessages((prev) =>
         prev.map((m) =>
-          m.id === msgId
-            ? { ...m, confirmed: false, content: '❌ Discarded.', parsedIntent: undefined }
-            : m,
+          m.id === msgId ? { ...m, confirmed: false, content: '❌ Discarded.', parsedIntent: undefined } : m,
         ),
       );
     },
@@ -510,11 +339,9 @@ export default function Chat() {
     [handleSend],
   );
 
-  const needsConfirmation = (msg: ChatMessage): boolean =>
-    !!msg.parsedIntent && msg.confirmed === undefined && msg.parsedIntent.intent !== 'query';
-
   return (
     <AppLayout>
+      {/* Header */}
       <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-2.5">
           <h1 className="text-xl font-bold text-foreground tracking-tight">Chat</h1>
@@ -528,10 +355,7 @@ export default function Chat() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => {
-              setMessages([]);
-              toast.success('Chat cleared');
-            }}
+            onClick={() => { setMessages([]); toast.success('Chat cleared'); }}
             className="text-muted-foreground hover:text-destructive gap-1.5 rounded-full text-xs"
           >
             <Trash2 className="h-3.5 w-3.5" /> Clear
@@ -610,89 +434,5 @@ export default function Chat() {
         </div>
       </div>
     </AppLayout>
-  );
-}
-
-// ────────────────────────────────────────────────────────────────
-// Sub-Components
-// ────────────────────────────────────────────────────────────────
-
-function EmptyState({ visible }: { visible: boolean }) {
-  if (!visible) return null;
-
-  return (
-    <div className="text-center py-12 text-muted-foreground space-y-5">
-      <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
-        <Sparkles className="h-6 w-6 text-primary" />
-      </div>
-      <p className="text-sm font-semibold text-foreground">Try these examples</p>
-      <div className="flex flex-wrap justify-center gap-2">
-        {EXAMPLES.map(({ emoji, text }) => (
-          <span key={text} className="inline-flex items-center gap-1.5 text-xs bg-card border border-border px-3.5 py-2 rounded-full hover:bg-muted transition-colors cursor-default">
-            {emoji} {text}
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-interface MessageBubbleProps {
-  message: ChatMessage;
-  showActions: boolean;
-  onConfirm: () => void;
-  onReject: () => void;
-}
-
-function MessageBubble({ message, showActions, onConfirm, onReject }: MessageBubbleProps) {
-  const isUser = message.role === 'user';
-
-  return (
-    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
-      <div className="max-w-[80%]">
-        <div
-          className={`rounded-2xl px-4 py-3 ${
-            isUser
-              ? 'bg-primary text-primary-foreground shadow-md shadow-primary/20'
-              : 'bg-card border border-border shadow-sm'
-          }`}
-        >
-            {message.imageUrl && (
-              <img
-                src={message.imageUrl}
-                alt="Receipt"
-                className="rounded-xl mb-2 max-h-40 object-cover"
-              />
-            )}
-
-            {message.isLoading ? (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span>Thinking...</span>
-              </div>
-            ) : (
-              <p className="text-sm whitespace-pre-wrap leading-relaxed">{message.content}</p>
-            )}
-
-            {showActions && (
-              <div className="flex gap-2 mt-3">
-                <Button size="sm" onClick={onConfirm} className="gap-1 rounded-full shadow-sm">
-                  <Check className="h-3 w-3" /> Save
-                </Button>
-                <Button size="sm" variant="outline" onClick={onReject} className="gap-1 rounded-full">
-                  <X className="h-3 w-3" /> Discard
-                </Button>
-              </div>
-            )}
-        </div>
-
-        <p className="text-[10px] text-muted-foreground/60 mt-1.5 px-1">
-          {new Date(message.timestamp).toLocaleTimeString([], {
-            hour: '2-digit',
-            minute: '2-digit',
-          })}
-        </p>
-      </div>
-    </div>
   );
 }
