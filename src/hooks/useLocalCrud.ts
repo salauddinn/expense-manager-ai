@@ -1,12 +1,11 @@
 // @refresh reset
 /**
  * Generic CRUD hook factory for localStorage-backed collections.
- *
- * Eliminates duplicate code across useAssets, useLoans, useBankAccounts, etc.
  */
 
 import { useLocalStorage } from './useLocalStorage';
 import { useCallback } from 'react';
+import { logger } from '@/lib/logger';
 
 interface WithId {
   id: string;
@@ -18,26 +17,29 @@ export function useLocalCrud<T extends WithId>(storageKey: string) {
   const add = useCallback(
     (item: Omit<T, 'id'>) => {
       const newItem = { ...item, id: crypto.randomUUID() } as T;
+      logger.info(`[CRUD] Add to "${storageKey}"`, newItem.id);
       setItems((prev) => [...prev, newItem]);
       return newItem;
     },
-    [setItems],
+    [setItems, storageKey],
   );
 
   const remove = useCallback(
     (id: string) => {
+      logger.info(`[CRUD] Remove from "${storageKey}"`, id);
       setItems((prev) => prev.filter((item) => item.id !== id));
     },
-    [setItems],
+    [setItems, storageKey],
   );
 
   const update = useCallback(
     (id: string, updates: Partial<T>) => {
+      logger.info(`[CRUD] Update in "${storageKey}"`, id);
       setItems((prev) =>
         prev.map((item) => (item.id === id ? { ...item, ...updates } : item)),
       );
     },
-    [setItems],
+    [setItems, storageKey],
   );
 
   return { items, add, remove, update, setItems };

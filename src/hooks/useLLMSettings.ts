@@ -1,10 +1,11 @@
 /**
  * LLM Settings hook — stores API key and provider in localStorage.
- * The user provides their own API key (stored only in their browser).
  */
 
 import { useCallback } from 'react';
 import { useLocalStorage } from './useLocalStorage';
+import { logger } from '@/lib/logger';
+import { analytics } from '@/lib/analytics';
 
 export type LLMProvider = 'openai' | 'google';
 
@@ -42,10 +43,16 @@ export function useLLMSettings() {
   const isConfigured = !!settings.apiKey.trim();
 
   const updateSettings = useCallback((updates: Partial<LLMSettings>) => {
+    logger.info('[LLMSettings] Updated', Object.keys(updates));
+    if (updates.provider) analytics.track('llm_provider_changed', { provider: updates.provider });
+    if (updates.model) analytics.track('llm_model_changed', { model: updates.model });
+    if (updates.apiKey !== undefined) analytics.track('llm_apikey_updated', { hasKey: !!updates.apiKey.trim() });
     setSettings((prev) => ({ ...prev, ...updates }));
   }, [setSettings]);
 
   const clearApiKey = useCallback(() => {
+    logger.info('[LLMSettings] API key cleared');
+    analytics.track('llm_apikey_cleared');
     setSettings((prev) => ({ ...prev, apiKey: '' }));
   }, [setSettings]);
 

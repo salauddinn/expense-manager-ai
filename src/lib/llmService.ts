@@ -1,16 +1,12 @@
 /**
  * LLM Service — Calls OpenAI or Google Gemini APIs directly from the browser.
- *
- * The user provides their own API key (BYOK pattern).
- * Uses function/tool calling to extract structured financial data.
  */
 
 import { LLMProvider } from '@/hooks/useLLMSettings';
 import { CategoryType, TransactionType } from '@/types/finance';
+import { logger } from '@/lib/logger';
 
-// ────────────────────────────────────────────────────────────────
-// Types
-// ────────────────────────────────────────────────────────────────
+// ── Types ──
 
 export interface LLMParsedResult {
   intent: string;
@@ -18,9 +14,7 @@ export interface LLMParsedResult {
   message: string;
 }
 
-// ────────────────────────────────────────────────────────────────
-// System Prompt
-// ────────────────────────────────────────────────────────────────
+// ── System Prompt ──
 
 const SYSTEM_PROMPT = `You are FinTrack, a smart personal finance assistant. Parse the user's message and extract structured financial data.
 
@@ -42,9 +36,7 @@ Important rules:
 - Detect the category from context (food, groceries, transport, shopping, bills, entertainment, health, education, rent, travel, salary, freelance, investment, gift, refund, other)
 - Be friendly and confirm what you understood in the message field`;
 
-// ────────────────────────────────────────────────────────────────
-// Tool Definitions (OpenAI format)
-// ────────────────────────────────────────────────────────────────
+// ── Tool Definitions ──
 
 const TOOLS = [
   {
@@ -181,15 +173,15 @@ const TOOLS = [
   },
 ];
 
-// ────────────────────────────────────────────────────────────────
-// API Callers
-// ────────────────────────────────────────────────────────────────
+// ── API Callers ──
 
 async function callOpenAI(
   apiKey: string,
   model: string,
   userMessage: string,
 ): Promise<LLMParsedResult> {
+  logger.info('[LLM] Calling OpenAI', { model, messageLength: userMessage.length });
+
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -209,6 +201,7 @@ async function callOpenAI(
 
   if (!response.ok) {
     const error = await response.text();
+    logger.error('[LLM] OpenAI API error', { status: response.status, error });
     throw new Error(`OpenAI API error (${response.status}): ${error}`);
   }
 
@@ -216,7 +209,7 @@ async function callOpenAI(
   const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
 
   if (!toolCall) {
-    // Fallback to content if no tool call
+    logger.warn('[LLM] OpenAI returned no tool call, falling back to content');
     return {
       intent: 'unknown',
       data: {},
@@ -225,6 +218,7 @@ async function callOpenAI(
   }
 
   const args = JSON.parse(toolCall.function.arguments);
+  logger.info('[LLM] OpenAI parsed intent', { intent: toolCall.function.name });
   return {
     intent: toolCall.function.name,
     data: args,
@@ -237,7 +231,8 @@ async function callGemini(
   model: string,
   userMessage: string,
 ): Promise<LLMParsedResult> {
-  // Convert OpenAI tool format → Gemini format
+  logger.info('[LLM] Calling Gemini', { model, messageLength: userMessage.length });
+
   const geminiTools = [{
     function_declarations: TOOLS.map((t) => ({
       name: t.function.name,
@@ -262,6 +257,7 @@ async function callGemini(
 
   if (!response.ok) {
     const error = await response.text();
+    logger.error('[LLM] Gemini API error', { status: response.status, error });
     throw new Error(`Gemini API error (${response.status}): ${error}`);
   }
 
@@ -270,6 +266,7 @@ async function callGemini(
   const fnCall = parts.find((p: any) => p.functionCall);
 
   if (!fnCall) {
+    logger.warn('[LLM] Gemini returned no function call');
     const textPart = parts.find((p: any) => p.text);
     return {
       intent: 'unknown',
@@ -279,6 +276,7 @@ async function callGemini(
   }
 
   const args = fnCall.functionCall.args;
+  logger.info('[LLM] Gemini parsed intent', { intent: fnCall.functionCall.name });
   return {
     intent: fnCall.functionCall.name,
     data: args,
@@ -286,23 +284,22 @@ async function callGemini(
   };
 }
 
-// ────────────────────────────────────────────────────────────────
-// Public API
-// ────────────────────────────────────────────────────────────────
+// ── Public API ──
 
-/** Call the configured LLM to parse a user's financial message. */
 export async function callLLM(
   provider: LLMProvider,
   apiKey: string,
   model: string,
   userMessage: string,
 ): Promise<LLMParsedResult> {
+  logger.debug('[LLM] callLLM invoked', { provider, model });
   switch (provider) {
     case 'openai':
       return callOpenAI(apiKey, model, userMessage);
     case 'google':
       return callGemini(apiKey, model, userMessage);
     default:
+      logger.error('[LLM] Unsupported provider', provider);
       throw new Error(`Unsupported provider: ${provider}`);
   }
 }
@@ -322,6 +319,7 @@ export function mapLLMResultToIntent(result: LLMParsedResult) {
   };
 
   const mappedIntent = intentMap[intent] ?? 'unknown';
+  logger.debug('[LLM] Mapped intent', { raw: intent, mapped: mappedIntent });
 
   if (mappedIntent === 'transaction') {
     return {
