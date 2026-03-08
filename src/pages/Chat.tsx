@@ -193,8 +193,9 @@ export default function Chat() {
       switch (parsed.intent) {
         case 'transaction': {
           const d = parsed.data;
+          const sourceText = d.sourceName ? ` from **${d.sourceName}**` : '';
           return {
-            content: `I detected a **${d.type}** of **${formatCurrency(d.amount, d.currency)}** in category **${getCategoryInfo(d.category).label}**. Shall I save this?`,
+            content: `I detected a **${d.type}** of **${formatCurrency(d.amount, d.currency)}** in category **${getCategoryInfo(d.category).label}**${sourceText}. Shall I save this?`,
             parsedIntent: { intent: 'transaction', data: { ...d, receiptUrl: imageUrl } },
           };
         }
