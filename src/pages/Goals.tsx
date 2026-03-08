@@ -78,7 +78,7 @@ export default function Goals() {
     const goal = goals.find((g) => g.id === goalId);
     if (!tx || !goal) return;
 
-    const { newMilestones } = linkTransaction(goalId, txId, tx.amount);
+    const { newMilestones } = linkTransaction(goalId, txId, tx.amount, tx.description);
     toast.success(`Linked "${tx.description}" — ${formatCurrency(tx.amount, tx.currency)} added`);
     if (newMilestones.length > 0) {
       celebrate(newMilestones, goal.name);
