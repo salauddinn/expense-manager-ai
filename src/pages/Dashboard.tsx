@@ -80,7 +80,7 @@ export default function Dashboard() {
       <Card className="mb-4 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
         <CardContent className="pt-6">
           <p className="text-sm text-muted-foreground mb-1">Net Worth</p>
-          <p className={`text-3xl font-bold ${netWorth >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
+          <p className={`text-3xl font-bold ${netWorth >= 0 ? 'text-success' : 'text-destructive'}`}>
             {formatCurrency(Math.abs(netWorth), 'INR')}
           </p>
           {netWorth < 0 && (
