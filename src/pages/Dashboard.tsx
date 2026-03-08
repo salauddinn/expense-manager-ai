@@ -3,6 +3,7 @@
  */
 
 import { useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { AlertsBanner } from '@/components/AlertsBanner';
 import { Card, CardContent } from '@/components/ui/card';
 import { TransactionRow } from '@/components/TransactionRow';
