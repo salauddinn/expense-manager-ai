@@ -40,6 +40,8 @@ export interface ParsedTransaction {
   sourceName?: string;
   /** Whether the source is a credit card (vs bank account) */
   sourceIsCard?: boolean;
+  /** Cashback amount received on this transaction */
+  cashback?: number;
 }
 
 export interface ParsedBankAccount {
