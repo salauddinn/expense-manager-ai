@@ -9,6 +9,7 @@ import Transactions from "./pages/Transactions";
 import LoanCalculator from "./pages/LoanCalculator";
 import Accounts from "./pages/Accounts";
 import Budget from "./pages/Budget";
+import Install from "./pages/Install";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
