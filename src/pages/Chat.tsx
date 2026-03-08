@@ -23,7 +23,7 @@ import { callLLM, mapLLMResultToIntent } from '@/lib/llmService';
 import { formatCurrency } from '@/lib/currencies';
 import { getCategoryInfo } from '@/lib/categories';
 import { CategoryType } from '@/types/finance';
-import { Send, Check, X, ImagePlus, Sparkles, Loader2 } from 'lucide-react';
+import { Send, Check, X, ImagePlus, Sparkles, Loader2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   startOfDay, startOfWeek, startOfMonth, startOfYear, isAfter,
@@ -515,12 +515,27 @@ export default function Chat() {
 
   return (
     <AppLayout>
-      <div className="flex items-center gap-2.5 mb-1">
-        <h1 className="text-xl font-bold text-foreground tracking-tight">Chat</h1>
-        {isLLMConfigured && (
-          <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-primary/10 text-primary px-2.5 py-0.5 rounded-full">
-            <Sparkles className="h-3 w-3" /> AI
-          </span>
+      <div className="flex items-center justify-between mb-1">
+        <div className="flex items-center gap-2.5">
+          <h1 className="text-xl font-bold text-foreground tracking-tight">Chat</h1>
+          {isLLMConfigured && (
+            <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-primary/10 text-primary px-2.5 py-0.5 rounded-full">
+              <Sparkles className="h-3 w-3" /> AI
+            </span>
+          )}
+        </div>
+        {messages.length > 0 && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setMessages([]);
+              toast.success('Chat cleared');
+            }}
+            className="text-muted-foreground hover:text-destructive gap-1.5 rounded-full text-xs"
+          >
+            <Trash2 className="h-3.5 w-3.5" /> Clear
+          </Button>
         )}
       </div>
       <p className="text-[11px] text-muted-foreground mb-4">
