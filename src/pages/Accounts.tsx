@@ -74,7 +74,7 @@ export default function Accounts() {
             <CardContent className="py-1 px-4">
               <div className="divide-y divide-border">
                 {cards.map((c) => (
-                  <div key={c.id} className="group flex items-center justify-between py-3">
+                  <Link key={c.id} to={`/accounts/${c.id}`} className="group flex items-center justify-between py-3 -mx-4 px-4 hover:bg-muted/50 transition-colors">
                     <div>
                       <p className="text-sm font-medium">{c.name}</p>
                       <p className="text-[11px] text-muted-foreground">
@@ -84,11 +84,9 @@ export default function Accounts() {
                     </div>
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-medium tabular-nums text-destructive">{formatCurrency(c.outstanding, c.currency)}</p>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => { deleteCard(c.id); toast.success('Deleted'); }}>
-                        <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
-                      </Button>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             </CardContent>
