@@ -24,7 +24,7 @@ import {
 } from 'date-fns';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Transaction } from '@/types/finance';
-import { TrendingUp, TrendingDown, ArrowUpRight, MessageSquare } from 'lucide-react';
+import { TrendingUp, TrendingDown, ArrowUpRight, MessageSquare, RotateCcw } from 'lucide-react';
 
 function getMonthlyChartData(transactions: Transaction[]) {
   return Array.from({ length: 6 }, (_, i) => {
