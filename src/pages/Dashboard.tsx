@@ -75,6 +75,7 @@ export default function Dashboard() {
   const totalLoanOutstanding = sumBy(loans, (l) => l.principal);
   const totalAssetValue = sumBy(assets, (a) => a.value);
   const netWorth = totalBankBalance + totalAssetValue - totalCreditDebt - totalLoanOutstanding;
+  const totalCashback = sumBy(transactions, (t) => t.cashback ?? 0);
 
   const chartData = useMemo(() => getMonthlyChartData(transactions), [transactions]);
   const recentTransactions = useMemo(
