@@ -340,7 +340,7 @@ export function mapLLMResultToIntent(result: LLMParsedResult) {
       intent: 'bank_account' as const,
       data: {
         name: (data.name as string) ?? 'Account',
-        type: (data.type as 'savings' | 'current' | 'salary') ?? 'savings',
+        type: (data.type as 'savings' | 'current' | 'salary' | 'cash') ?? 'savings',
         balance: (data.balance as number) ?? 0,
         currency: (data.currency as string) ?? 'INR',
       },

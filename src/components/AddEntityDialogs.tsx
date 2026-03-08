@@ -52,6 +52,7 @@ export function AddBankDialog({ onAdd }: { onAdd: (a: Omit<BankAccount, 'id'>) =
                 <SelectItem value="savings">Savings</SelectItem>
                 <SelectItem value="current">Current</SelectItem>
                 <SelectItem value="salary">Salary</SelectItem>
+                <SelectItem value="cash">Cash</SelectItem>
               </SelectContent>
             </Select>
           </Field>
