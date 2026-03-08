@@ -51,6 +51,13 @@ export function useFinancialGoals() {
         const freshMilestones = MILESTONES.filter((m) => pct >= m && !celebrated.includes(m));
         newMilestones = freshMilestones;
 
+        const entry: GoalContribution = {
+          id: crypto.randomUUID(),
+          amount,
+          date: new Date().toISOString(),
+          source: 'manual',
+        };
+
         logger.info('[Goals] Contribution added', { id, amount, newPct: Math.round(pct) });
         if (freshMilestones.length > 0) {
           analytics.track('goal_milestone', { id, milestones: freshMilestones.join(',') });
@@ -59,6 +66,7 @@ export function useFinancialGoals() {
         return {
           ...g,
           currentAmount: newAmount,
+          contributions: [...(g.contributions ?? []), entry],
           celebratedMilestones: [...celebrated, ...freshMilestones],
         };
       })
