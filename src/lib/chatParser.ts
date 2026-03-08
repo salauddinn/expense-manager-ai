@@ -48,11 +48,40 @@ export function parseMessage(message: string): ParsedResult {
   let amount: number | null = null;
   let currency = DEFAULT_CURRENCY;
 
+  // Indian multiplier words
+  const MULTIPLIERS: Record<string, number> = {
+    lakh: 100000, lakhs: 100000, lac: 100000, lacs: 100000,
+    crore: 10000000, crores: 10000000, cr: 10000000,
+    thousand: 1000, thousands: 1000, k: 1000,
+    million: 1000000, mil: 1000000, m: 1000000,
+    billion: 1000000000, b: 1000000000,
+  };
+
+  // Pattern: 1 lakh, 2.5 crore, 50k, 10 thousand
+  const multiplierMatch = message.match(/([\d,]+\.?\d*)\s*(lakh|lakhs|lac|lacs|crore|crores|cr|thousand|thousands|million|mil|billion)\b/i);
+  if (multiplierMatch) {
+    const base = parseFloat(multiplierMatch[1].replace(/,/g, ''));
+    const mult = MULTIPLIERS[multiplierMatch[2].toLowerCase()];
+    if (mult) amount = base * mult;
+  }
+
+  // Pattern: 50k (number immediately followed by k/m/b)
+  if (!amount) {
+    const shortMatch = message.match(/([\d,]+\.?\d*)\s?([kmb])\b/i);
+    if (shortMatch) {
+      const base = parseFloat(shortMatch[1].replace(/,/g, ''));
+      const mult = MULTIPLIERS[shortMatch[2].toLowerCase()];
+      if (mult) amount = base * mult;
+    }
+  }
+
   // Pattern: ₹500, $50, €30, £20
-  const symbolMatch = message.match(/([₹$€£¥])\s*([\d,]+\.?\d*)/);
-  if (symbolMatch) {
-    currency = CURRENCY_MAP[symbolMatch[1]] || DEFAULT_CURRENCY;
-    amount = parseFloat(symbolMatch[2].replace(/,/g, ''));
+  if (!amount) {
+    const symbolMatch = message.match(/([₹$€£¥])\s*([\d,]+\.?\d*)/);
+    if (symbolMatch) {
+      currency = CURRENCY_MAP[symbolMatch[1]] || DEFAULT_CURRENCY;
+      amount = parseFloat(symbolMatch[2].replace(/,/g, ''));
+    }
   }
 
   // Pattern: 500 INR, 50 USD, 30 EUR
@@ -79,6 +108,12 @@ export function parseMessage(message: string): ParsedResult {
     if (numMatch) {
       amount = parseFloat(numMatch[1].replace(/,/g, ''));
     }
+  }
+
+  // Detect currency from multiplier context if not yet set
+  if (multiplierMatch && currency === DEFAULT_CURRENCY) {
+    const currSymbol = message.match(/([₹$€£¥])/);
+    if (currSymbol) currency = CURRENCY_MAP[currSymbol[1]] || DEFAULT_CURRENCY;
   }
 
   // Detect category
