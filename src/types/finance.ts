@@ -12,7 +12,7 @@ export interface Transaction {
   currency: string;
   category: CategoryType;
   description: string;
-  date: string; // ISO string
+  date: string;
   receiptUrl?: string;
   createdAt: string;
 }
@@ -38,7 +38,7 @@ export interface Loan {
   id: string;
   name: string;
   principal: number;
-  rate: number; // annual %
+  rate: number;
   tenureMonths: number;
   startDate: string;
   currency: string;
@@ -59,4 +59,12 @@ export interface ChatMessage {
   timestamp: string;
   parsedTransaction?: Partial<Transaction>;
   confirmed?: boolean;
+  imageUrl?: string;
+}
+
+export interface BudgetGoal {
+  id: string;
+  category: CategoryType;
+  monthlyLimit: number;
+  currency: string;
 }

@@ -1,12 +1,12 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { LayoutDashboard, MessageSquare, List, Calculator, Wallet } from 'lucide-react';
+import { LayoutDashboard, MessageSquare, List, Target, Wallet } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const NAV_ITEMS = [
-  { to: '/', label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/', label: 'Home', icon: LayoutDashboard },
   { to: '/chat', label: 'Chat', icon: MessageSquare },
   { to: '/transactions', label: 'History', icon: List },
-  { to: '/loan-calculator', label: 'Loans', icon: Calculator },
+  { to: '/budget', label: 'Budget', icon: Target },
   { to: '/accounts', label: 'Accounts', icon: Wallet },
 ];
 

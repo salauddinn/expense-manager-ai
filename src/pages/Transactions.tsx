@@ -7,8 +7,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useTransactions } from '@/hooks/useTransactions';
 import { formatCurrency } from '@/lib/currencies';
 import { getCategoryInfo } from '@/lib/categories';
+import { exportTransactionsCSV } from '@/lib/exportData';
 import { format } from 'date-fns';
-import { Trash2, Search } from 'lucide-react';
+import { Trash2, Search, Download } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function Transactions() {
@@ -28,9 +29,23 @@ export default function Transactions() {
     toast.success('Transaction deleted');
   };
 
+  const handleExport = () => {
+    if (transactions.length === 0) {
+      toast.error('No transactions to export');
+      return;
+    }
+    exportTransactionsCSV(filtered);
+    toast.success('CSV downloaded!');
+  };
+
   return (
     <AppLayout>
-      <h1 className="mb-4 text-2xl font-bold text-foreground">Transactions</h1>
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-2xl font-bold text-foreground">Transactions</h1>
+        <Button variant="outline" size="sm" onClick={handleExport} className="gap-1">
+          <Download className="h-3.5 w-3.5" /> Export
+        </Button>
+      </div>
 
       <div className="flex gap-2 mb-4">
         <div className="relative flex-1">
