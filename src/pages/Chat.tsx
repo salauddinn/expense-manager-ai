@@ -474,10 +474,10 @@ export default function Chat() {
 
   return (
     <AppLayout>
-      <div className="flex items-center gap-2 mb-1">
-        <h1 className="text-xl font-semibold text-foreground">Chat</h1>
+      <div className="flex items-center gap-2.5 mb-1">
+        <h1 className="text-xl font-bold text-foreground tracking-tight">Chat</h1>
         {isLLMConfigured && (
-          <span className="inline-flex items-center gap-1 text-[10px] font-medium bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+          <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-primary/10 text-primary px-2.5 py-0.5 rounded-full">
             <Sparkles className="h-3 w-3" /> AI
           </span>
         )}
@@ -516,12 +516,12 @@ export default function Chat() {
       />
 
       {/* Input bar */}
-      <div className="fixed bottom-14 left-0 right-0 bg-card/95 backdrop-blur-sm px-5 py-3">
+      <div className="fixed bottom-14 left-0 right-0 bg-card/80 backdrop-blur-xl border-t border-border/40 px-5 py-3">
         <div className="mx-auto max-w-2xl flex gap-2">
           <Button
-            variant="outline"
+            variant="ghost"
             size="icon"
-            className="shrink-0"
+            className="shrink-0 rounded-xl h-11 w-11"
             onClick={() => fileInputRef.current?.click()}
             aria-label="Upload receipt"
             disabled={isProcessing}
@@ -534,7 +534,7 @@ export default function Chat() {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={isLLMConfigured ? 'Ask anything about your finances...' : 'Try: spent ₹500 on groceries...'}
-            className="flex-1 rounded-full px-4"
+            className="flex-1 rounded-full px-5 h-11 bg-muted/50"
             disabled={isProcessing}
           />
 
@@ -543,6 +543,7 @@ export default function Chat() {
             size="icon"
             disabled={!input.trim() || isProcessing}
             aria-label="Send message"
+            className="rounded-full h-11 w-11 shadow-md shadow-primary/20"
           >
             {isProcessing ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -564,11 +565,14 @@ function EmptyState({ visible }: { visible: boolean }) {
   if (!visible) return null;
 
   return (
-    <div className="text-center py-10 text-muted-foreground space-y-4">
-      <p className="text-sm font-medium">Try these examples</p>
+    <div className="text-center py-12 text-muted-foreground space-y-5">
+      <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
+        <Sparkles className="h-6 w-6 text-primary" />
+      </div>
+      <p className="text-sm font-semibold text-foreground">Try these examples</p>
       <div className="flex flex-wrap justify-center gap-2">
         {EXAMPLES.map(({ emoji, text }) => (
-          <span key={text} className="inline-flex items-center gap-1 text-xs bg-secondary px-3 py-1.5 rounded-full">
+          <span key={text} className="inline-flex items-center gap-1.5 text-xs bg-card border border-border px-3.5 py-2 rounded-full hover:bg-muted transition-colors cursor-default">
             {emoji} {text}
           </span>
         ))}
@@ -593,15 +597,15 @@ function MessageBubble({ message, showActions, onConfirm, onReject }: MessageBub
         <div
           className={`rounded-2xl px-4 py-3 ${
             isUser
-              ? 'bg-foreground text-background'
-              : 'bg-card border border-border'
+              ? 'bg-primary text-primary-foreground shadow-md shadow-primary/20'
+              : 'bg-card border border-border shadow-sm'
           }`}
         >
             {message.imageUrl && (
               <img
                 src={message.imageUrl}
                 alt="Receipt"
-                className="rounded-md mb-2 max-h-40 object-cover"
+                className="rounded-xl mb-2 max-h-40 object-cover"
               />
             )}
 
@@ -611,12 +615,12 @@ function MessageBubble({ message, showActions, onConfirm, onReject }: MessageBub
                 <span>Thinking...</span>
               </div>
             ) : (
-              <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+              <p className="text-sm whitespace-pre-wrap leading-relaxed">{message.content}</p>
             )}
 
             {showActions && (
               <div className="flex gap-2 mt-3">
-                <Button size="sm" onClick={onConfirm} className="gap-1 rounded-full">
+                <Button size="sm" onClick={onConfirm} className="gap-1 rounded-full shadow-sm">
                   <Check className="h-3 w-3" /> Save
                 </Button>
                 <Button size="sm" variant="outline" onClick={onReject} className="gap-1 rounded-full">
@@ -626,7 +630,7 @@ function MessageBubble({ message, showActions, onConfirm, onReject }: MessageBub
             )}
         </div>
 
-        <p className="text-[10px] text-muted-foreground mt-1 px-1">
+        <p className="text-[10px] text-muted-foreground/60 mt-1.5 px-1">
           {new Date(message.timestamp).toLocaleTimeString([], {
             hour: '2-digit',
             minute: '2-digit',
