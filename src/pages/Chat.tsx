@@ -597,15 +597,15 @@ function MessageBubble({ message, showActions, onConfirm, onReject }: MessageBub
         <div
           className={`rounded-2xl px-4 py-3 ${
             isUser
-              ? 'bg-foreground text-background'
-              : 'bg-card border border-border'
+              ? 'bg-primary text-primary-foreground shadow-md shadow-primary/20'
+              : 'bg-card border border-border shadow-sm'
           }`}
         >
             {message.imageUrl && (
               <img
                 src={message.imageUrl}
                 alt="Receipt"
-                className="rounded-md mb-2 max-h-40 object-cover"
+                className="rounded-xl mb-2 max-h-40 object-cover"
               />
             )}
 
@@ -615,12 +615,12 @@ function MessageBubble({ message, showActions, onConfirm, onReject }: MessageBub
                 <span>Thinking...</span>
               </div>
             ) : (
-              <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+              <p className="text-sm whitespace-pre-wrap leading-relaxed">{message.content}</p>
             )}
 
             {showActions && (
               <div className="flex gap-2 mt-3">
-                <Button size="sm" onClick={onConfirm} className="gap-1 rounded-full">
+                <Button size="sm" onClick={onConfirm} className="gap-1 rounded-full shadow-sm">
                   <Check className="h-3 w-3" /> Save
                 </Button>
                 <Button size="sm" variant="outline" onClick={onReject} className="gap-1 rounded-full">
@@ -630,7 +630,7 @@ function MessageBubble({ message, showActions, onConfirm, onReject }: MessageBub
             )}
         </div>
 
-        <p className="text-[10px] text-muted-foreground mt-1 px-1">
+        <p className="text-[10px] text-muted-foreground/60 mt-1.5 px-1">
           {new Date(message.timestamp).toLocaleTimeString([], {
             hour: '2-digit',
             minute: '2-digit',
