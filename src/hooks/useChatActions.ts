@@ -63,7 +63,7 @@ export function useChatActions() {
           const cashbackText = d.cashback ? ` with cashback **${formatCurrency(d.cashback, d.currency)}**` : '';
           const sourceText = d.sourceName ? ` from **${d.sourceName}**` : '';
           return {
-            content: `I detected a **${d.type}** of **${formatCurrency(d.amount, d.currency)}** in category **${getCategoryInfo(d.category).label}**${sourceText}. Shall I save this?`,
+            content: `I detected a **${d.type}** of **${formatCurrency(d.amount, d.currency)}** in category **${getCategoryInfo(d.category).label}**${sourceText}${cashbackText}. Shall I save this?`,
             parsedIntent: { intent: 'transaction', data: { ...d, receiptUrl: imageUrl } },
           };
         }
