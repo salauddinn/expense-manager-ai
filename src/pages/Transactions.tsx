@@ -26,7 +26,7 @@ import { cn } from '@/lib/utils';
 const FILTERS = ['all', 'income', 'expense'] as const;
 
 export default function Transactions() {
-  const { transactions, deleteTransaction, updateTransaction } = useTransactions();
+  const { transactions, deleteTransaction, updateTransaction, addTransaction } = useTransactions();
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
