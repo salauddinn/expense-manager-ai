@@ -6,12 +6,14 @@ import { useMemo } from 'react';
 import { AlertsBanner } from '@/components/AlertsBanner';
 import { Card, CardContent } from '@/components/ui/card';
 import { TransactionRow } from '@/components/TransactionRow';
+import { Section } from '@/components/shared/Section';
 import { useTransactions } from '@/hooks/useTransactions';
 import { useBankAccounts } from '@/hooks/useBankAccounts';
 import { useCreditCards } from '@/hooks/useCreditCards';
 import { useLoans } from '@/hooks/useLoans';
 import { useAssets } from '@/hooks/useAssets';
 import { formatCurrency } from '@/lib/currencies';
+import { sumBy, CHART_TOOLTIP_STYLE } from '@/lib/shared';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from 'recharts';
@@ -21,10 +23,6 @@ import {
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Transaction } from '@/types/finance';
 import { TrendingUp, TrendingDown, ArrowUpRight } from 'lucide-react';
-
-function sumBy<T>(items: T[], getter: (item: T) => number): number {
-  return items.reduce((total, item) => total + getter(item), 0);
-}
 
 function getMonthlyChartData(transactions: Transaction[]) {
   return Array.from({ length: 6 }, (_, i) => {
@@ -48,6 +46,18 @@ function getGreeting() {
   if (hour < 17) return 'Good afternoon';
   return 'Good evening';
 }
+
+/** Maps accent names to explicit Tailwind classes (dynamic classes are purged in production). */
+const ACCENT_BORDER: Record<string, string> = {
+  primary: 'accent-border-primary',
+  destructive: 'accent-border-destructive',
+  success: 'accent-border-success',
+  warning: 'accent-border-warning',
+};
+
+const VALUE_COLOR: Record<string, string> = {
+  destructive: 'text-destructive',
+};
 
 export default function Dashboard() {
   const { transactions } = useTransactions();
@@ -98,14 +108,13 @@ export default function Dashboard() {
       {/* Quick Stats */}
       <div className="grid grid-cols-2 gap-3 mb-6">
         <StatCard title="Bank Balance" value={formatCurrency(totalBankBalance, 'INR')} accent="primary" />
-        <StatCard title="Credit Debt" value={formatCurrency(totalCreditDebt, 'INR')} accent="destructive" valueClassName="text-destructive" />
+        <StatCard title="Credit Debt" value={formatCurrency(totalCreditDebt, 'INR')} accent="destructive" />
         <StatCard title="Assets" value={formatCurrency(totalAssetValue, 'INR')} accent="success" />
         <StatCard title="Loans" value={formatCurrency(totalLoanOutstanding, 'INR')} accent="warning" />
       </div>
 
       {/* Income vs Expenses Chart */}
-      <div className="mb-6">
-        <h2 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-3">Income vs Expenses</h2>
+      <Section title="Income vs Expenses">
         <Card>
           <CardContent className="pt-4 pb-2">
             <div className="h-44">
@@ -120,14 +129,7 @@ export default function Dashboard() {
                   <YAxis hide />
                   <Tooltip
                     cursor={{ fill: 'hsl(var(--muted) / 0.5)' }}
-                    contentStyle={{
-                      backgroundColor: 'hsl(var(--card))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '12px',
-                      color: 'hsl(var(--foreground))',
-                      fontSize: '12px',
-                      boxShadow: '0 8px 24px rgba(0,0,0,0.08)',
-                    }}
+                    contentStyle={CHART_TOOLTIP_STYLE}
                   />
                   <Bar dataKey="income" fill="hsl(var(--success))" radius={[6, 6, 6, 6]} />
                   <Bar dataKey="expense" fill="hsl(var(--destructive))" radius={[6, 6, 6, 6]} opacity={0.7} />
@@ -136,7 +138,7 @@ export default function Dashboard() {
             </div>
           </CardContent>
         </Card>
-      </div>
+      </Section>
 
       {/* Recent Transactions */}
       <div>
@@ -172,18 +174,16 @@ function StatCard({
   title,
   value,
   accent,
-  valueClassName,
 }: {
   title: string;
   value: string;
   accent: string;
-  valueClassName?: string;
 }) {
   return (
-    <Card className={`accent-border-${accent}`}>
+    <Card className={ACCENT_BORDER[accent] ?? ''}>
       <CardContent className="pt-4 pb-3 px-4">
         <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-0.5">{title}</p>
-        <p className={`text-xl font-bold tracking-tight ${valueClassName ?? 'text-foreground'}`}>{value}</p>
+        <p className={`text-xl font-bold tracking-tight ${VALUE_COLOR[accent] ?? 'text-foreground'}`}>{value}</p>
       </CardContent>
     </Card>
   );

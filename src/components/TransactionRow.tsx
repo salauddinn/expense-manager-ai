@@ -32,7 +32,7 @@ export function TransactionRow({
 
   return (
     <div
-      className={`flex items-center justify-between py-3.5 ${onClick ? 'cursor-pointer hover:bg-muted/50 -mx-4 px-4 transition-colors' : ''}`}
+      className={`group flex items-center justify-between py-3.5 ${onClick ? 'cursor-pointer hover:bg-muted/50 -mx-4 px-4 transition-colors' : ''}`}
       onClick={onClick}
     >
       <div className="flex items-center gap-3 min-w-0">
