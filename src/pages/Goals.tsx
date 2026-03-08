@@ -189,13 +189,14 @@ export default function Goals() {
                 <CardContent className="pt-4 pb-3 px-4">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-2.5">
-                      <div
-                        className="h-10 w-10 rounded-xl flex items-center justify-center text-xl"
-                        style={{ backgroundColor: `${goalColor}15` }}
-                      >
-                        {goal.icon}
-                      </div>
-                      <div>
+                      <Link to={`/goals/${goal.id}`} className="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
+                        <div
+                          className="h-10 w-10 rounded-xl flex items-center justify-center text-xl"
+                          style={{ backgroundColor: `${goalColor}15` }}
+                        >
+                          {goal.icon}
+                        </div>
+                        <div>
                         <p className="text-sm font-semibold">{goal.name}</p>
                         <div className="flex items-center gap-2 flex-wrap">
                           <span
@@ -214,7 +215,8 @@ export default function Goals() {
                             </span>
                           )}
                         </div>
-                      </div>
+                        </div>
+                      </Link>
                     </div>
                     <ConfirmDialog
                       trigger={
@@ -272,15 +274,16 @@ export default function Goals() {
                     </span>
                   </div>
 
-                  {/* Full contribution history */}
+                  {/* Recent contributions (last 3) */}
                   {(goal.contributions ?? []).length > 0 && (
                     <div className="mt-2 space-y-1">
                       <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                        Savings History ({(goal.contributions ?? []).length})
+                        Recent Savings
                       </p>
-                      <div className="max-h-40 overflow-y-auto space-y-1 pr-1">
+                      <div className="space-y-1">
                         {[...(goal.contributions ?? [])]
                           .reverse()
+                          .slice(0, 3)
                           .map((c) => (
                             <div key={c.id} className="flex items-center justify-between text-[11px] px-2 py-1.5 rounded-lg bg-muted/40">
                               <div className="flex items-center gap-1.5 min-w-0">
@@ -300,6 +303,12 @@ export default function Goals() {
                             </div>
                           ))}
                       </div>
+                      <Link
+                        to={`/goals/${goal.id}`}
+                        className="block text-center text-[11px] font-medium text-primary hover:underline pt-1"
+                      >
+                        View all ({(goal.contributions ?? []).length}) →
+                      </Link>
                     </div>
                   )}
 

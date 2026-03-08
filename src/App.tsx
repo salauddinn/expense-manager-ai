@@ -14,6 +14,7 @@ import AccountDetail from "./pages/AccountDetail";
 import Budget from "./pages/Budget";
 import Insights from "./pages/Insights";
 import Goals from "./pages/Goals";
+import GoalDetail from "./pages/GoalDetail";
 import Install from "./pages/Install";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsConditions from "./pages/TermsConditions";
@@ -39,6 +40,7 @@ const App = () => (
             <Route path="/budget" element={<Budget />} />
             <Route path="/insights" element={<Insights />} />
             <Route path="/goals" element={<Goals />} />
+            <Route path="/goals/:id" element={<GoalDetail />} />
             <Route path="/install" element={<Install />} />
             <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="/terms" element={<TermsConditions />} />
