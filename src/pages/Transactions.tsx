@@ -18,7 +18,7 @@ import { formatCurrency, CURRENCIES } from '@/lib/currencies';
 import { ALL_CATEGORIES as CATEGORIES } from '@/lib/categories';
 import { exportTransactionsCSV } from '@/lib/exportData';
 import { Transaction, CategoryType, TransactionType } from '@/types/finance';
-import { Trash2, Search, Download, Pencil, MessageSquare } from 'lucide-react';
+import { Trash2, Search, Download, Pencil, MessageSquare, Plus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
