@@ -206,6 +206,8 @@ export default function Chat() {
       const text = input.trim();
       if (!text && !imageUrl) return;
 
+      logger.info('[Chat] Message sent', { hasText: !!text, hasImage: !!imageUrl, mode: isLLMConfigured ? 'llm' : 'rule' });
+      analytics.track('chat_message_sent', { mode: isLLMConfigured ? 'llm' : 'rule', hasImage: !!imageUrl });
       const userMsg = createMessage('user', text || '📷 Receipt uploaded', { imageUrl });
 
       if (imageUrl && !text) {
