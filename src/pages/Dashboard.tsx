@@ -3,7 +3,7 @@
  */
 
 import { useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { useTransactions } from '@/hooks/useTransactions';
 import { useBankAccounts } from '@/hooks/useBankAccounts';
 import { useCreditCards } from '@/hooks/useCreditCards';
@@ -11,9 +11,8 @@ import { useLoans } from '@/hooks/useLoans';
 import { useAssets } from '@/hooks/useAssets';
 import { formatCurrency } from '@/lib/currencies';
 import { getCategoryInfo } from '@/lib/categories';
-import { Landmark, CreditCard, PiggyBank, Receipt } from 'lucide-react';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from 'recharts';
 import {
   format, subMonths, startOfMonth, endOfMonth, isWithinInterval,
@@ -34,17 +33,22 @@ function getMonthlyChartData(transactions: Transaction[]) {
     const date = subMonths(new Date(), 5 - i);
     const start = startOfMonth(date);
     const end = endOfMonth(date);
-
     const monthTxns = transactions.filter((t) =>
       isWithinInterval(new Date(t.date), { start, end }),
     );
-
     return {
       name: format(date, 'MMM'),
       income: sumBy(monthTxns.filter((t) => t.type === 'income'), (t) => t.amount),
       expense: sumBy(monthTxns.filter((t) => t.type === 'expense'), (t) => t.amount),
     };
   });
+}
+
+function getGreeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 17) return 'Good afternoon';
+  return 'Good evening';
 }
 
 // ────────────────────────────────────────────────────────────────
@@ -58,115 +62,94 @@ export default function Dashboard() {
   const { loans } = useLoans();
   const { assets } = useAssets();
 
-  // Computed totals
   const totalBankBalance = sumBy(accounts, (a) => a.balance);
   const totalCreditDebt = sumBy(cards, (c) => c.outstanding);
   const totalLoanOutstanding = sumBy(loans, (l) => l.principal);
   const totalAssetValue = sumBy(assets, (a) => a.value);
   const netWorth = totalBankBalance + totalAssetValue - totalCreditDebt - totalLoanOutstanding;
 
-  const chartData = useMemo(
-    () => getMonthlyChartData(transactions),
-    [transactions],
-  );
-
+  const chartData = useMemo(() => getMonthlyChartData(transactions), [transactions]);
   const recentTransactions = transactions.slice(0, 5);
 
   return (
     <AppLayout>
-      <h1 className="mb-4 text-2xl font-bold text-foreground">Dashboard</h1>
+      {/* Greeting */}
+      <div className="mb-6">
+        <h1 className="text-xl font-semibold text-foreground">{getGreeting()}</h1>
+        <p className="text-sm text-muted-foreground mt-0.5">{format(new Date(), 'EEEE, d MMMM yyyy')}</p>
+      </div>
 
       {/* Net Worth */}
-      <Card className="mb-4 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
-        <CardContent className="pt-6">
-          <p className="text-sm text-muted-foreground mb-1">Net Worth</p>
-          <p className={`text-3xl font-bold ${netWorth >= 0 ? 'text-success' : 'text-destructive'}`}>
-            {formatCurrency(Math.abs(netWorth), 'INR')}
+      <Card className="mb-6">
+        <CardContent className="pt-5 pb-4">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Net Worth</p>
+          <p className={`text-3xl font-semibold tracking-tight ${netWorth >= 0 ? 'text-foreground' : 'text-destructive'}`}>
+            {netWorth < 0 && '−'}{formatCurrency(Math.abs(netWorth), 'INR')}
           </p>
-          {netWorth < 0 && (
-            <p className="text-xs text-destructive mt-1">Negative net worth</p>
-          )}
         </CardContent>
       </Card>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-2 gap-3 mb-4">
-        <StatCard
-          icon={<Landmark className="h-4 w-4 text-primary" />}
-          label="Bank Balance"
-          value={formatCurrency(totalBankBalance, 'INR')}
-        />
-        <StatCard
-          icon={<CreditCard className="h-4 w-4 text-destructive" />}
-          label="Credit Debt"
-          value={formatCurrency(totalCreditDebt, 'INR')}
-        />
-        <StatCard
-          icon={<PiggyBank className="h-4 w-4 text-success" />}
-          label="Assets"
-          value={formatCurrency(totalAssetValue, 'INR')}
-        />
-        <StatCard
-          icon={<Receipt className="h-4 w-4 text-warning" />}
-          label="Loan Outstanding"
-          value={formatCurrency(totalLoanOutstanding, 'INR')}
-        />
+      <div className="grid grid-cols-2 gap-3 mb-6">
+        <StatCard label="Bank Balance" value={formatCurrency(totalBankBalance, 'INR')} />
+        <StatCard label="Credit Debt" value={formatCurrency(totalCreditDebt, 'INR')} variant="destructive" />
+        <StatCard label="Assets" value={formatCurrency(totalAssetValue, 'INR')} />
+        <StatCard label="Loans" value={formatCurrency(totalLoanOutstanding, 'INR')} />
       </div>
 
       {/* Income vs Expenses Chart */}
-      <Card className="mb-4">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">Income vs Expenses (6 months)</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-48">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                <XAxis
-                  dataKey="name"
-                  className="text-xs"
-                  tick={{ fill: 'hsl(var(--muted-foreground))' }}
-                />
-                <YAxis
-                  className="text-xs"
-                  tick={{ fill: 'hsl(var(--muted-foreground))' }}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: 'hsl(var(--card))',
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '8px',
-                    color: 'hsl(var(--foreground))',
-                  }}
-                />
-                <Bar dataKey="income" fill="hsl(var(--success))" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="expense" fill="hsl(var(--destructive))" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="mb-6">
+        <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">Income vs Expenses</h2>
+        <Card>
+          <CardContent className="pt-4 pb-2">
+            <div className="h-44">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData} barGap={2}>
+                  <XAxis
+                    dataKey="name"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
+                  />
+                  <YAxis hide />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '10px',
+                      color: 'hsl(var(--foreground))',
+                      fontSize: '12px',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
+                    }}
+                  />
+                  <Bar dataKey="income" fill="hsl(var(--success))" radius={[6, 6, 6, 6]} />
+                  <Bar dataKey="expense" fill="hsl(var(--destructive))" radius={[6, 6, 6, 6]} opacity={0.75} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Recent Transactions */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">Recent Transactions</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {recentTransactions.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-4 text-center">
-              No transactions yet. Use the Chat tab to add one!
-            </p>
-          ) : (
-            <div className="space-y-3">
-              {recentTransactions.map((t) => (
-                <TransactionRow key={t.id} transaction={t} />
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <div>
+        <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">Recent Transactions</h2>
+        <Card>
+          <CardContent className="py-1">
+            {recentTransactions.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-8 text-center">
+                No transactions yet. Use Chat to add one.
+              </p>
+            ) : (
+              <div className="divide-y divide-border">
+                {recentTransactions.map((t) => (
+                  <TransactionRow key={t.id} transaction={t} />
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </AppLayout>
   );
 }
@@ -175,21 +158,14 @@ export default function Dashboard() {
 // Sub-Components
 // ────────────────────────────────────────────────────────────────
 
-interface StatCardProps {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-}
-
-function StatCard({ icon, label, value }: StatCardProps) {
+function StatCard({ label, value, variant }: { label: string; value: string; variant?: 'destructive' }) {
   return (
     <Card>
       <CardContent className="pt-4 pb-3 px-4">
-        <div className="flex items-center gap-2 mb-1">
-          {icon}
-          <span className="text-xs text-muted-foreground">{label}</span>
-        </div>
-        <p className="text-lg font-semibold">{value}</p>
+        <p className="text-[11px] font-medium text-muted-foreground mb-1">{label}</p>
+        <p className={`text-lg font-semibold tracking-tight ${variant === 'destructive' ? 'text-destructive' : 'text-foreground'}`}>
+          {value}
+        </p>
       </CardContent>
     </Card>
   );
@@ -199,22 +175,22 @@ function TransactionRow({ transaction: t }: { transaction: Transaction }) {
   const category = getCategoryInfo(t.category);
 
   return (
-    <div className="flex items-center justify-between">
+    <div className="flex items-center justify-between py-3">
       <div className="flex items-center gap-3">
-        <span className="text-xl">{category.icon}</span>
+        <span className="text-lg">{category.icon}</span>
         <div>
           <p className="text-sm font-medium line-clamp-1">{t.description}</p>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-[11px] text-muted-foreground">
             {format(new Date(t.date), 'dd MMM yyyy')}
           </p>
         </div>
       </div>
       <p
-        className={`text-sm font-semibold ${
+        className={`text-sm font-medium tabular-nums ${
           t.type === 'income' ? 'text-success' : 'text-destructive'
         }`}
       >
-        {t.type === 'income' ? '+' : '-'}
+        {t.type === 'income' ? '+' : '−'}
         {formatCurrency(t.amount, t.currency)}
       </p>
     </div>

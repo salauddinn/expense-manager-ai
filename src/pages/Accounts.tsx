@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,7 +11,7 @@ import { useCreditCards } from '@/hooks/useCreditCards';
 import { useAssets } from '@/hooks/useAssets';
 import { formatCurrency, CURRENCIES } from '@/lib/currencies';
 import { BankAccount, CreditCard as CreditCardType, Asset } from '@/types/finance';
-import { Landmark, CreditCard as CreditCardIcon, Gem, Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function Accounts() {
@@ -21,91 +21,106 @@ export default function Accounts() {
 
   return (
     <AppLayout>
-      <h1 className="mb-4 text-2xl font-bold text-foreground">Accounts & Assets</h1>
+      <h1 className="text-xl font-semibold text-foreground mb-6">Accounts & Assets</h1>
 
       {/* Bank Accounts */}
-      <Section title="Bank Accounts" icon={<Landmark className="h-4 w-4" />}>
+      <Section title="Bank Accounts">
         <AddBankDialog onAdd={addAccount} />
         {accounts.length === 0 && <EmptyState text="No bank accounts added" />}
-        {accounts.map((a) => (
-          <Card key={a.id}>
-            <CardContent className="py-3 px-4 flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium">{a.name}</p>
-                <p className="text-xs text-muted-foreground capitalize">{a.type}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <p className="text-sm font-semibold">{formatCurrency(a.balance, a.currency)}</p>
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { deleteAccount(a.id); toast.success('Deleted'); }}>
-                  <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
-                </Button>
+        {accounts.length > 0 && (
+          <Card>
+            <CardContent className="py-1">
+              <div className="divide-y divide-border">
+                {accounts.map((a) => (
+                  <div key={a.id} className="group flex items-center justify-between py-3">
+                    <div>
+                      <p className="text-sm font-medium">{a.name}</p>
+                      <p className="text-[11px] text-muted-foreground capitalize">{a.type}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium tabular-nums">{formatCurrency(a.balance, a.currency)}</p>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => { deleteAccount(a.id); toast.success('Deleted'); }}>
+                        <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>
-        ))}
+        )}
       </Section>
 
       {/* Credit Cards */}
-      <Section title="Credit Cards" icon={<CreditCardIcon className="h-4 w-4" />}>
+      <Section title="Credit Cards">
         <AddCardDialog onAdd={addCard} />
         {cards.length === 0 && <EmptyState text="No credit cards added" />}
-        {cards.map((c) => (
-          <Card key={c.id}>
-            <CardContent className="py-3 px-4 flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium">{c.name}</p>
-                <p className="text-xs text-muted-foreground">Limit: {formatCurrency(c.limit, c.currency)}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <p className="text-sm font-semibold text-destructive">{formatCurrency(c.outstanding, c.currency)}</p>
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { deleteCard(c.id); toast.success('Deleted'); }}>
-                  <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
-                </Button>
+        {cards.length > 0 && (
+          <Card>
+            <CardContent className="py-1">
+              <div className="divide-y divide-border">
+                {cards.map((c) => (
+                  <div key={c.id} className="group flex items-center justify-between py-3">
+                    <div>
+                      <p className="text-sm font-medium">{c.name}</p>
+                      <p className="text-[11px] text-muted-foreground">Limit: {formatCurrency(c.limit, c.currency)}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium tabular-nums text-destructive">{formatCurrency(c.outstanding, c.currency)}</p>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => { deleteCard(c.id); toast.success('Deleted'); }}>
+                        <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>
-        ))}
+        )}
       </Section>
 
       {/* Assets */}
-      <Section title="Assets" icon={<Gem className="h-4 w-4" />}>
+      <Section title="Assets">
         <AddAssetDialog onAdd={addAsset} />
         {assets.length === 0 && <EmptyState text="No assets added" />}
-        {assets.map((a) => (
-          <Card key={a.id}>
-            <CardContent className="py-3 px-4 flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium">{a.name}</p>
-                <p className="text-xs text-muted-foreground capitalize">{a.type}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <p className="text-sm font-semibold text-success">{formatCurrency(a.value, a.currency)}</p>
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { deleteAsset(a.id); toast.success('Deleted'); }}>
-                  <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
-                </Button>
+        {assets.length > 0 && (
+          <Card>
+            <CardContent className="py-1">
+              <div className="divide-y divide-border">
+                {assets.map((a) => (
+                  <div key={a.id} className="group flex items-center justify-between py-3">
+                    <div>
+                      <p className="text-sm font-medium">{a.name}</p>
+                      <p className="text-[11px] text-muted-foreground capitalize">{a.type}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium tabular-nums text-success">{formatCurrency(a.value, a.currency)}</p>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => { deleteAsset(a.id); toast.success('Deleted'); }}>
+                        <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>
-        ))}
+        )}
       </Section>
     </AppLayout>
   );
 }
 
-function Section({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="mb-6">
-      <div className="flex items-center gap-2 mb-3">
-        {icon}
-        <h2 className="text-lg font-semibold">{title}</h2>
-      </div>
+      <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">{title}</h2>
       <div className="space-y-2">{children}</div>
     </div>
   );
 }
 
 function EmptyState({ text }: { text: string }) {
-  return <p className="text-sm text-muted-foreground text-center py-4">{text}</p>;
+  return <p className="text-sm text-muted-foreground text-center py-6">{text}</p>;
 }
 
 function AddBankDialog({ onAdd }: { onAdd: (a: Omit<BankAccount, 'id'>) => void }) {
@@ -125,13 +140,13 @@ function AddBankDialog({ onAdd }: { onAdd: (a: Omit<BankAccount, 'id'>) => void 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="w-full mb-2 gap-1"><Plus className="h-3 w-3" /> Add Account</Button>
+        <Button variant="outline" size="sm" className="w-full mb-2 gap-1.5 text-muted-foreground"><Plus className="h-3 w-3" /> Add Account</Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader><DialogTitle>Add Bank Account</DialogTitle></DialogHeader>
-        <div className="space-y-3">
-          <div><Label>Name</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. HDFC Savings" /></div>
-          <div><Label>Type</Label>
+        <div className="space-y-4 pt-2">
+          <div className="space-y-1.5"><Label>Name</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. HDFC Savings" /></div>
+          <div className="space-y-1.5"><Label>Type</Label>
             <Select value={type} onValueChange={(v) => setType(v as 'savings' | 'current' | 'salary')}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -141,8 +156,8 @@ function AddBankDialog({ onAdd }: { onAdd: (a: Omit<BankAccount, 'id'>) => void 
               </SelectContent>
             </Select>
           </div>
-          <div><Label>Balance</Label><Input type="number" value={balance} onChange={(e) => setBalance(Number(e.target.value))} /></div>
-          <div><Label>Currency</Label>
+          <div className="space-y-1.5"><Label>Balance</Label><Input type="number" value={balance} onChange={(e) => setBalance(Number(e.target.value))} /></div>
+          <div className="space-y-1.5"><Label>Currency</Label>
             <Select value={currency} onValueChange={setCurrency}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>{CURRENCIES.map((c) => <SelectItem key={c.code} value={c.code}>{c.symbol} {c.name}</SelectItem>)}</SelectContent>
@@ -173,16 +188,16 @@ function AddCardDialog({ onAdd }: { onAdd: (c: Omit<CreditCardType, 'id'>) => vo
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="w-full mb-2 gap-1"><Plus className="h-3 w-3" /> Add Card</Button>
+        <Button variant="outline" size="sm" className="w-full mb-2 gap-1.5 text-muted-foreground"><Plus className="h-3 w-3" /> Add Card</Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader><DialogTitle>Add Credit Card</DialogTitle></DialogHeader>
-        <div className="space-y-3">
-          <div><Label>Name</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. ICICI Amazon Pay" /></div>
-          <div><Label>Credit Limit</Label><Input type="number" value={limit} onChange={(e) => setLimit(Number(e.target.value))} /></div>
-          <div><Label>Outstanding</Label><Input type="number" value={outstanding} onChange={(e) => setOutstanding(Number(e.target.value))} /></div>
-          <div><Label>Due Date</Label><Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} /></div>
-          <div><Label>Currency</Label>
+        <div className="space-y-4 pt-2">
+          <div className="space-y-1.5"><Label>Name</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. ICICI Amazon Pay" /></div>
+          <div className="space-y-1.5"><Label>Credit Limit</Label><Input type="number" value={limit} onChange={(e) => setLimit(Number(e.target.value))} /></div>
+          <div className="space-y-1.5"><Label>Outstanding</Label><Input type="number" value={outstanding} onChange={(e) => setOutstanding(Number(e.target.value))} /></div>
+          <div className="space-y-1.5"><Label>Due Date</Label><Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label>Currency</Label>
             <Select value={currency} onValueChange={setCurrency}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>{CURRENCIES.map((c) => <SelectItem key={c.code} value={c.code}>{c.symbol} {c.name}</SelectItem>)}</SelectContent>
@@ -212,13 +227,13 @@ function AddAssetDialog({ onAdd }: { onAdd: (a: Omit<Asset, 'id'>) => void }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="w-full mb-2 gap-1"><Plus className="h-3 w-3" /> Add Asset</Button>
+        <Button variant="outline" size="sm" className="w-full mb-2 gap-1.5 text-muted-foreground"><Plus className="h-3 w-3" /> Add Asset</Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader><DialogTitle>Add Asset</DialogTitle></DialogHeader>
-        <div className="space-y-3">
-          <div><Label>Name</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Apartment in Mumbai" /></div>
-          <div><Label>Type</Label>
+        <div className="space-y-4 pt-2">
+          <div className="space-y-1.5"><Label>Name</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Apartment in Mumbai" /></div>
+          <div className="space-y-1.5"><Label>Type</Label>
             <Select value={type} onValueChange={(v) => setType(v as 'property' | 'investment' | 'vehicle' | 'other')}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -229,8 +244,8 @@ function AddAssetDialog({ onAdd }: { onAdd: (a: Omit<Asset, 'id'>) => void }) {
               </SelectContent>
             </Select>
           </div>
-          <div><Label>Value</Label><Input type="number" value={value} onChange={(e) => setValue(Number(e.target.value))} /></div>
-          <div><Label>Currency</Label>
+          <div className="space-y-1.5"><Label>Value</Label><Input type="number" value={value} onChange={(e) => setValue(Number(e.target.value))} /></div>
+          <div className="space-y-1.5"><Label>Currency</Label>
             <Select value={currency} onValueChange={setCurrency}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>{CURRENCIES.map((c) => <SelectItem key={c.code} value={c.code}>{c.symbol} {c.name}</SelectItem>)}</SelectContent>

@@ -474,18 +474,18 @@ export default function Chat() {
 
   return (
     <AppLayout>
-      <div className="flex items-center gap-2 mb-2">
-        <h1 className="text-2xl font-bold text-foreground">Smart Chat</h1>
+      <div className="flex items-center gap-2 mb-1">
+        <h1 className="text-xl font-semibold text-foreground">Chat</h1>
         {isLLMConfigured && (
           <span className="inline-flex items-center gap-1 text-[10px] font-medium bg-primary/10 text-primary px-2 py-0.5 rounded-full">
             <Sparkles className="h-3 w-3" /> AI
           </span>
         )}
       </div>
-      <p className="text-xs text-muted-foreground mb-4">
+      <p className="text-[11px] text-muted-foreground mb-4">
         {isLLMConfigured
           ? 'AI-powered — understands complex sentences naturally.'
-          : 'Add your API key in ⚙️ settings to enable AI mode.'}
+          : 'Add your API key in settings to enable AI mode.'}
       </p>
 
       {/* Message list */}
@@ -516,8 +516,8 @@ export default function Chat() {
       />
 
       {/* Input bar */}
-      <div className="fixed bottom-20 left-0 right-0 bg-background/95 backdrop-blur border-t px-4 py-3">
-        <div className="mx-auto max-w-lg flex gap-2">
+      <div className="fixed bottom-14 left-0 right-0 bg-card/95 backdrop-blur-sm px-5 py-3">
+        <div className="mx-auto max-w-2xl flex gap-2">
           <Button
             variant="outline"
             size="icon"
@@ -534,7 +534,7 @@ export default function Chat() {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={isLLMConfigured ? 'Ask anything about your finances...' : 'Try: spent ₹500 on groceries...'}
-            className="flex-1"
+            className="flex-1 rounded-full px-4"
             disabled={isProcessing}
           />
 
@@ -564,14 +564,13 @@ function EmptyState({ visible }: { visible: boolean }) {
   if (!visible) return null;
 
   return (
-    <div className="text-center py-8 text-muted-foreground space-y-3">
-      <p className="text-lg">💬</p>
-      <p className="text-sm font-medium">Try these examples:</p>
-      <div className="space-y-1 text-xs">
+    <div className="text-center py-10 text-muted-foreground space-y-4">
+      <p className="text-sm font-medium">Try these examples</p>
+      <div className="flex flex-wrap justify-center gap-2">
         {EXAMPLES.map(({ emoji, text }) => (
-          <p key={text}>
+          <span key={text} className="inline-flex items-center gap-1 text-xs bg-secondary px-3 py-1.5 rounded-full">
             {emoji} {text}
-          </p>
+          </span>
         ))}
       </div>
     </div>
@@ -590,15 +589,14 @@ function MessageBubble({ message, showActions, onConfirm, onReject }: MessageBub
 
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
-      <div className="max-w-[85%]">
-        <Card
-          className={
+      <div className="max-w-[80%]">
+        <div
+          className={`rounded-2xl px-4 py-3 ${
             isUser
-              ? 'bg-primary text-primary-foreground border-primary'
-              : 'bg-card border-border'
-          }
+              ? 'bg-foreground text-background'
+              : 'bg-card border border-border'
+          }`}
         >
-          <CardContent className="py-3 px-4">
             {message.imageUrl && (
               <img
                 src={message.imageUrl}
@@ -618,16 +616,15 @@ function MessageBubble({ message, showActions, onConfirm, onReject }: MessageBub
 
             {showActions && (
               <div className="flex gap-2 mt-3">
-                <Button size="sm" onClick={onConfirm} className="gap-1">
+                <Button size="sm" onClick={onConfirm} className="gap-1 rounded-full">
                   <Check className="h-3 w-3" /> Save
                 </Button>
-                <Button size="sm" variant="outline" onClick={onReject} className="gap-1">
+                <Button size="sm" variant="outline" onClick={onReject} className="gap-1 rounded-full">
                   <X className="h-3 w-3" /> Discard
                 </Button>
               </div>
             )}
-          </CardContent>
-        </Card>
+        </div>
 
         <p className="text-[10px] text-muted-foreground mt-1 px-1">
           {new Date(message.timestamp).toLocaleTimeString([], {
