@@ -14,7 +14,7 @@ import { useFinancialGoals, GOAL_CATEGORIES, getGoalCategoryInfo } from '@/hooks
 import { useTransactions } from '@/hooks/useTransactions';
 import { formatCurrency } from '@/lib/currencies';
 import { GoalCategory } from '@/types/finance';
-import { Plus, Trash2, Target, TrendingUp, MessageSquare, Link2 } from 'lucide-react';
+import { Plus, Trash2, Target, TrendingUp, MessageSquare, Link2, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function Goals() {
