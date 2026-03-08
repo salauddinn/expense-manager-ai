@@ -43,34 +43,34 @@ export default function Transactions() {
   return (
     <AppLayout>
       <div className="flex items-center justify-between mb-5">
-        <h1 className="text-xl font-semibold text-foreground">Transactions</h1>
-        <Button variant="ghost" size="sm" onClick={handleExport} className="gap-1.5 text-muted-foreground hover:text-foreground">
+        <h1 className="text-xl font-bold text-foreground tracking-tight">Transactions</h1>
+        <Button variant="ghost" size="sm" onClick={handleExport} className="gap-1.5 text-muted-foreground hover:text-foreground text-xs">
           <Download className="h-3.5 w-3.5" /> Export
         </Button>
       </div>
 
       {/* Search */}
       <div className="relative mb-4">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search transactions..."
-          className="pl-9"
+          className="pl-10 rounded-xl h-11 bg-card"
         />
       </div>
 
       {/* Filter pills */}
-      <div className="flex gap-1.5 mb-5">
+      <div className="flex gap-2 mb-5">
         {FILTERS.map((f) => (
           <button
             key={f}
             onClick={() => setTypeFilter(f)}
             className={cn(
-              'px-3.5 py-1.5 text-xs font-medium rounded-full transition-colors capitalize',
+              'px-4 py-1.5 text-xs font-semibold rounded-full transition-all capitalize',
               typeFilter === f
-                ? 'bg-foreground text-background'
-                : 'bg-secondary text-muted-foreground hover:text-foreground'
+                ? 'bg-primary text-primary-foreground shadow-md shadow-primary/25'
+                : 'bg-card text-muted-foreground hover:text-foreground border border-border'
             )}
           >
             {f}
@@ -79,26 +79,28 @@ export default function Transactions() {
       </div>
 
       {filtered.length === 0 ? (
-        <p className="text-center text-muted-foreground py-12 text-sm">No transactions found.</p>
+        <p className="text-center text-muted-foreground py-16 text-sm">No transactions found.</p>
       ) : (
         <Card>
-          <CardContent className="py-1">
+          <CardContent className="py-1 px-4">
             <div className="divide-y divide-border">
               {filtered.map((t) => {
                 const cat = getCategoryInfo(t.category);
                 return (
-                  <div key={t.id} className="group flex items-center justify-between py-3">
+                  <div key={t.id} className="group flex items-center justify-between py-3.5">
                     <div className="flex items-center gap-3 min-w-0">
-                      <span className="text-lg shrink-0">{cat.icon}</span>
+                      <div className="h-9 w-9 rounded-xl bg-muted flex items-center justify-center text-base shrink-0">
+                        {cat.icon}
+                      </div>
                       <div className="min-w-0">
-                        <p className="text-sm font-medium truncate">{t.description}</p>
+                        <p className="text-sm font-semibold truncate">{t.description}</p>
                         <p className="text-[11px] text-muted-foreground">
                           {cat.label} · {format(new Date(t.date), 'dd MMM yyyy')}
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0 ml-3">
-                      <p className={`text-sm font-medium tabular-nums ${t.type === 'income' ? 'text-success' : 'text-destructive'}`}>
+                      <p className={`text-sm font-bold tabular-nums ${t.type === 'income' ? 'text-success' : 'text-destructive'}`}>
                         {t.type === 'income' ? '+' : '−'}{formatCurrency(t.amount, t.currency)}
                       </p>
                       <Button

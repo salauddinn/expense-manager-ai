@@ -53,9 +53,13 @@ export default function Budget() {
   return (
     <AppLayout>
       <div className="flex items-center justify-between mb-5">
-        <h1 className="text-xl font-semibold text-foreground">Budget Goals</h1>
-        <Button variant="ghost" size="sm" onClick={() => setShowForm(!showForm)} className="gap-1.5 text-muted-foreground hover:text-foreground">
-          <Plus className="h-4 w-4" /> Add
+        <h1 className="text-xl font-bold text-foreground tracking-tight">Budget Goals</h1>
+        <Button 
+          size="sm" 
+          onClick={() => setShowForm(!showForm)} 
+          className="gap-1.5 rounded-full px-4 shadow-md shadow-primary/20"
+        >
+          <Plus className="h-3.5 w-3.5" /> Add
         </Button>
       </div>
 
@@ -63,7 +67,7 @@ export default function Budget() {
         <Card className="mb-5">
           <CardContent className="pt-5 pb-4 space-y-3">
             <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger>
+              <SelectTrigger className="rounded-xl h-11">
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
               <SelectContent>
@@ -79,17 +83,20 @@ export default function Budget() {
               placeholder="Monthly limit (₹)"
               value={limit}
               onChange={(e) => setLimit(e.target.value)}
+              className="rounded-xl h-11"
             />
-            <Button onClick={handleAdd} className="w-full">Save Goal</Button>
+            <Button onClick={handleAdd} className="w-full rounded-xl h-11">Save Goal</Button>
           </CardContent>
         </Card>
       )}
 
       {goals.length === 0 ? (
-        <div className="text-center py-16 text-muted-foreground">
-          <Target className="h-10 w-10 mx-auto mb-3 opacity-30" strokeWidth={1.5} />
-          <p className="text-sm">No budget goals yet</p>
-          <p className="text-xs mt-1">Add one to track your spending</p>
+        <div className="text-center py-20 text-muted-foreground">
+          <div className="h-16 w-16 rounded-2xl bg-muted flex items-center justify-center mx-auto mb-4">
+            <Target className="h-8 w-8 opacity-40" strokeWidth={1.5} />
+          </div>
+          <p className="text-sm font-medium">No budget goals yet</p>
+          <p className="text-xs mt-1 text-muted-foreground/70">Track your spending by category</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -100,20 +107,22 @@ export default function Budget() {
             const isOver = spent > goal.monthlyLimit;
 
             return (
-              <Card key={goal.id}>
+              <Card key={goal.id} className="group">
                 <CardContent className="pt-4 pb-3 px-4">
                   <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <span className="text-base">{cat.icon}</span>
-                      <span className="text-sm font-medium">{cat.label}</span>
+                    <div className="flex items-center gap-2.5">
+                      <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center text-sm">
+                        {cat.icon}
+                      </div>
+                      <span className="text-sm font-semibold">{cat.label}</span>
                     </div>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => { deleteGoal(goal.id); toast.success('Goal removed'); }}>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => { deleteGoal(goal.id); toast.success('Goal removed'); }}>
                       <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
                     </Button>
                   </div>
-                  <Progress value={percentage} className={`h-1.5 mb-2 ${isOver ? '[&>div]:bg-destructive' : '[&>div]:bg-primary'}`} />
+                  <Progress value={percentage} className={`h-2 rounded-full mb-2 ${isOver ? '[&>div]:bg-destructive' : '[&>div]:bg-primary'}`} />
                   <div className="flex justify-between text-[11px] text-muted-foreground">
-                    <span className={isOver ? 'text-destructive font-medium' : ''}>
+                    <span className={isOver ? 'text-destructive font-semibold' : ''}>
                       {formatCurrency(spent, goal.currency)} spent
                     </span>
                     <span>of {formatCurrency(goal.monthlyLimit, goal.currency)}</span>
