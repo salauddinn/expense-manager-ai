@@ -145,6 +145,7 @@ const CATEGORY_KEYWORDS: Record<string, CategoryType> = {
   electricity: 'bills', water: 'bills', internet: 'bills', wifi: 'bills',
   phone: 'bills', mobile: 'bills', recharge: 'bills', dth: 'bills',
   broadband: 'bills', jio: 'bills', airtel: 'bills',
+  'credit card bill': 'bills', 'card bill': 'bills', emi: 'bills',
   // Entertainment
   movie: 'entertainment', netflix: 'entertainment', spotify: 'entertainment',
   game: 'entertainment', hotstar: 'entertainment', prime: 'entertainment',
