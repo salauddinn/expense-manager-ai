@@ -272,6 +272,34 @@ export default function Goals() {
                     </span>
                   </div>
 
+                  {/* Recent contributions */}
+                  {(goal.contributions ?? []).length > 0 && (
+                    <div className="mt-2 space-y-1">
+                      <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Recent activity</p>
+                      {(goal.contributions ?? [])
+                        .slice(-5)
+                        .reverse()
+                        .map((c) => (
+                          <div key={c.id} className="flex items-center justify-between text-[11px] px-2 py-1 rounded-lg bg-muted/40">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span>{c.source === 'manual' ? '✋' : '🔗'}</span>
+                              <span className="text-muted-foreground truncate">
+                                {c.source === 'transaction' && c.label ? c.label : 'Manual'}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="font-semibold" style={{ color: goalColor }}>
+                                +{formatCurrency(c.amount, goal.currency)}
+                              </span>
+                              <span className="text-[10px] text-muted-foreground">
+                                {new Date(c.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  )}
+
                   {/* Actions */}
                   {!isComplete && (
                     <div className="mt-3 space-y-2">
