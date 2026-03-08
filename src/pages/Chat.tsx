@@ -468,7 +468,7 @@ export default function Chat() {
       );
       toast.success(successMsg.replace('✅ ', ''));
     },
-    [addTransaction, addAccount, addCard, addAsset, addLoan, addGoal, setMessages],
+    [addTransaction, addAccount, addCard, addAsset, addLoan, addGoal, accounts, cards, updateAccount, updateCard, resolveLinkedSource, setMessages],
   );
 
   const handleReject = useCallback(
