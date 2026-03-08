@@ -1,5 +1,5 @@
 import { useLocalStorage } from './useLocalStorage';
-import { FinancialGoal, GoalCategory } from '@/types/finance';
+import { FinancialGoal, GoalCategory, GoalContribution } from '@/types/finance';
 import { useCallback } from 'react';
 import { logger } from '@/lib/logger';
 import { analytics } from '@/lib/analytics';

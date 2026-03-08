@@ -93,6 +93,16 @@ export interface FinancialGoal {
   celebratedMilestones?: number[];
   /** Linked transaction IDs for auto-deduction tracking */
   linkedTransactionIds?: string[];
+  /** Contribution history */
+  contributions?: GoalContribution[];
   createdAt: string;
+}
+
+export interface GoalContribution {
+  id: string;
+  amount: number;
+  date: string;
+  source: 'manual' | 'transaction';
+  label?: string;
 }
 
