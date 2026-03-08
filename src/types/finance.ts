@@ -28,6 +28,10 @@ export interface Transaction {
   description: string;
   date: string;
   receiptUrl?: string;
+  /** Linked bank account ID — balance auto-updated on save */
+  linkedAccountId?: string;
+  /** Linked credit card ID — outstanding auto-updated on save */
+  linkedCardId?: string;
   createdAt: string;
 }
 
