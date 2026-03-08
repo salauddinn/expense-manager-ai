@@ -216,9 +216,9 @@ export function useChatActions() {
 
       switch (intent.intent) {
         case 'transaction': {
-          const { type, amount, currency, category, description, date, receiptUrl, sourceName, sourceIsCard } = intent.data as any;
+          const { type, amount, currency, category, description, date, receiptUrl, sourceName, sourceIsCard, cashback } = intent.data as any;
           const linkedIds = resolveLinkedSource(sourceName, sourceIsCard);
-          addTransaction({ type, amount, currency, category, description, date, receiptUrl, ...linkedIds });
+          addTransaction({ type, amount, currency, category, description, date, receiptUrl, ...linkedIds, ...(cashback && { cashback }) });
           if (linkedIds.linkedAccountId) {
             const delta = type === 'expense' ? -amount : amount;
             const account = accounts.find((a) => a.id === linkedIds.linkedAccountId);
