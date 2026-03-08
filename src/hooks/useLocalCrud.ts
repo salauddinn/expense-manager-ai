@@ -1,3 +1,4 @@
+// @refresh reset
 /**
  * Generic CRUD hook factory for localStorage-backed collections.
  *
