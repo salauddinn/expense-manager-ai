@@ -169,7 +169,7 @@ export default function Chat() {
           prev.map((m) => m.id === loadingMsgId ? { ...m, content: result.message, isLoading: false, parsedIntent, confirmed: undefined } : m),
         );
       } catch (error) {
-        console.error('LLM error:', error instanceof Error ? error.message : error);
+        logger.error('LLM call failed', error instanceof Error ? error.message : error);
 
         // Fallback to rule-based parser
         const parsed = parseMessageFull(text);
