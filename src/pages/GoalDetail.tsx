@@ -69,7 +69,7 @@ export default function GoalDetail() {
   const handleLink = (txId: string) => {
     const tx = transactions.find((t) => t.id === txId);
     if (!tx) return;
-    const { newMilestones } = linkTransaction(goal.id, txId, tx.amount, tx.description);
+    const { newMilestones } = await linkTransaction(goal.id, txId, tx.amount, tx.description);
     toast.success(`Linked "${tx.description}"`);
     if (newMilestones.length > 0) celebrate(newMilestones, goal.name);
     setShowLink(false);
