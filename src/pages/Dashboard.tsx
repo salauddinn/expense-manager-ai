@@ -96,6 +96,22 @@ export default function Dashboard() {
         <p className="text-sm text-muted-foreground mt-0.5">{format(new Date(), 'EEEE, d MMMM')}</p>
       </div>
 
+      {/* Loading State */}
+      {isLoading && (
+        <div className="space-y-4 mb-6">
+          <Skeleton className="h-28 w-full rounded-xl" />
+          <div className="grid grid-cols-2 gap-3">
+            <Skeleton className="h-20 rounded-xl" />
+            <Skeleton className="h-20 rounded-xl" />
+            <Skeleton className="h-20 rounded-xl" />
+            <Skeleton className="h-20 rounded-xl" />
+          </div>
+          <Skeleton className="h-48 w-full rounded-xl" />
+        </div>
+      )}
+
+      {!isLoading && (
+        <>
       {/* Data Migration Prompt */}
       {showPrompt && (
         <Card className="mb-4 border-primary/30 bg-primary/5">
