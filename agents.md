@@ -14,7 +14,7 @@ A mobile-first personal finance tracker with a smart chat interface for managing
 
 ### Data Layer
 - All data hooks (`useTransactions`, `useBankAccounts`, `useCreditCards`, `useAssets`, `useLoans`, `useBudgetGoals`) abstract storage behind a common `useLocalStorage` hook.
-- This pattern ensures a clean migration path to Supabase/Lovable Cloud — swap `useLocalStorage` internals without touching components.
+- This pattern ensures a clean migration path to Supabase — swap `useLocalStorage` internals without touching components.
 
 ### Chat Parser (`src/lib/chatParser.ts`)
 - Rule-based NLP parser supporting 7 intents: transaction, bank_account, credit_card, asset, loan, budget, query.
@@ -35,9 +35,8 @@ A mobile-first personal finance tracker with a smart chat interface for managing
 **Phase 2 — Capacitor Native (Optional)**
 - If native device features needed (camera for receipt OCR, push notifications, biometrics)
 - Capacitor config:
-  - `appId`: `app.lovable.5862c2af62174a33b6ea515cdc751575`
+  - `appId`: `app.fintrack.finance`
   - `appName`: `FinTrack`
-  - Server URL for dev: `https://5862c2af-6217-4a33-b6ea-515cdc751575.lovableproject.com?forceHideBadge=true`
 - Native platforms: iOS (Xcode required), Android (Android Studio required)
 - Sync command after changes: `npx cap sync`
 
@@ -95,7 +94,7 @@ A mobile-first personal finance tracker with a smart chat interface for managing
 - All colors via Tailwind semantic classes — no hardcoded hex/rgb in components
 
 ## Future Enhancements
-- [ ] Lovable Cloud backend (auth + persistent DB)
+- [ ] Cloud backend enhancements (multi-device sync)
 - [ ] Receipt OCR via AI
 - [ ] Recurring transactions
 - [ ] Multi-currency portfolio view
