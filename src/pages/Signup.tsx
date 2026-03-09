@@ -21,12 +21,14 @@ export default function Signup() {
       return;
     }
     setIsLoading(true);
-    const { error } = await signUp(email, password);
+    const { error, needsConfirmation } = await signUp(email, password);
     setIsLoading(false);
     if (error) {
       toast.error(error);
+    } else if (needsConfirmation) {
+      toast.success('Check your email to confirm your account, then sign in.');
+      navigate('/login');
     } else {
-      toast.success('Account created! You can now sign in.');
       navigate('/dashboard');
     }
   };

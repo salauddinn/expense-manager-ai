@@ -25,10 +25,11 @@ export function useBudgetGoals() {
   const addGoal = useCallback(
     async (category: CategoryType, monthlyLimit: number, currency: string = 'INR') => {
       logger.info('[BudgetGoals] Upsert', { category, monthlyLimit });
+      const { data: { session } } = await supabase.auth.getSession();
       const { error } = await supabase
         .from('budget_goals')
         .upsert(
-          { category, monthly_limit: monthlyLimit, currency },
+          { category, monthly_limit: monthlyLimit, currency, user_id: session?.user?.id },
           { onConflict: 'user_id,category' },
         );
 

@@ -63,6 +63,7 @@ export function useFinancialGoals() {
       logger.info('[Goals] Creating', goal.name);
       analytics.track('goal_created', { category: goal.category, target: goal.targetAmount });
 
+      const { data: { session } } = await supabase.auth.getSession();
       const { data, error } = await supabase
         .from('financial_goals')
         .insert({
@@ -75,6 +76,7 @@ export function useFinancialGoals() {
           category: goal.category,
           color: goal.color,
           celebrated_milestones: [],
+          user_id: session?.user?.id,
         })
         .select()
         .single();
@@ -103,6 +105,7 @@ export function useFinancialGoals() {
 
       const newCelebrated = [...celebrated, ...freshMilestones];
 
+      const { data: { session } } = await supabase.auth.getSession();
       const [updateRes, contribRes] = await Promise.all([
         supabase
           .from('financial_goals')
@@ -113,6 +116,7 @@ export function useFinancialGoals() {
           amount,
           date: new Date().toISOString(),
           source: 'manual',
+          user_id: session?.user?.id,
         }),
       ]);
 
@@ -141,6 +145,7 @@ export function useFinancialGoals() {
 
       logger.info('[Goals] Link transaction', { goalId, transactionId, amount });
 
+      const { data: { session } } = await supabase.auth.getSession();
       const [updateRes, contribRes, linkRes] = await Promise.all([
         supabase
           .from('financial_goals')
@@ -153,10 +158,12 @@ export function useFinancialGoals() {
           source: 'transaction',
           label: label ?? null,
           transaction_id: transactionId,
+          user_id: session?.user?.id,
         }),
         supabase.from('goal_linked_transactions').insert({
           goal_id: goalId,
           transaction_id: transactionId,
+          user_id: session?.user?.id,
         }),
       ]);
 

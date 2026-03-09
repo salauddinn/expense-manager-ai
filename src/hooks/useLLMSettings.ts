@@ -84,6 +84,8 @@ export function useLLMSettings() {
       }
 
       if (Object.keys(dbUpdates).length > 0) {
+        const { data: { session } } = await supabase.auth.getSession();
+        dbUpdates.user_id = session?.user?.id;
         await supabase
           .from('llm_settings')
           .upsert(dbUpdates, { onConflict: 'user_id' });

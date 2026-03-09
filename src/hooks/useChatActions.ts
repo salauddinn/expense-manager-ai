@@ -68,6 +68,7 @@ export function useChatActions() {
   const financialData = { transactions, accounts, cards, loans, assets };
 
   const persistMessage = useCallback(async (msg: ChatMessage) => {
+    const { data: { session } } = await supabase.auth.getSession();
     const { error } = await supabase.from('chat_messages').insert({
       id: msg.id,
       role: msg.role,
@@ -76,6 +77,7 @@ export function useChatActions() {
       parsed_intent: msg.parsedIntent ?? null,
       confirmed: msg.confirmed ?? null,
       is_loading: msg.isLoading ?? false,
+      user_id: session?.user?.id,
     });
     if (error) logger.error('[Chat] Failed to persist message', error.message);
   }, []);

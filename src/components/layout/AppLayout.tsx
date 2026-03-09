@@ -1,8 +1,19 @@
 import { BottomNav } from './BottomNav';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { LLMSettingsDialog } from '@/components/LLMSettingsDialog';
+import { useAuth } from '@/contexts/AuthContext';
+import { LogOut } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
+  const { signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/login');
+  };
+
   return (
     <div className="min-h-screen bg-background pb-24">
       <header className="sticky top-0 z-40 bg-card/80 backdrop-blur-xl border-b border-border/50">
@@ -16,6 +27,13 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-0.5">
             <LLMSettingsDialog />
             <ThemeToggle />
+            <button
+              onClick={handleSignOut}
+              className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+              title="Sign out"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
           </div>
         </div>
       </header>

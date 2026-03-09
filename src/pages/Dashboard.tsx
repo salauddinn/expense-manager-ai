@@ -14,6 +14,7 @@ import { useBankAccounts } from '@/hooks/useBankAccounts';
 import { useCreditCards } from '@/hooks/useCreditCards';
 import { useLoans } from '@/hooks/useLoans';
 import { useAssets } from '@/hooks/useAssets';
+import { useDataMigration } from '@/hooks/useDataMigration';
 import { formatCurrency, DEFAULT_CURRENCY } from '@/lib/currencies';
 import { sumBy, CHART_TOOLTIP_STYLE } from '@/lib/shared';
 import {
@@ -24,7 +25,7 @@ import {
 } from 'date-fns';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Transaction } from '@/types/finance';
-import { TrendingUp, TrendingDown, ArrowUpRight, MessageSquare, RotateCcw } from 'lucide-react';
+import { TrendingUp, TrendingDown, ArrowUpRight, MessageSquare, RotateCcw, CloudUpload, X } from 'lucide-react';
 
 function getMonthlyChartData(transactions: Transaction[]) {
   return Array.from({ length: 6 }, (_, i) => {
@@ -66,6 +67,7 @@ export default function Dashboard() {
   const { cards } = useCreditCards();
   const { loans } = useLoans();
   const { assets } = useAssets();
+  const { showPrompt, isMigrating, runMigration, dismissMigration } = useDataMigration();
 
   // Use primary currency from first account, or default
   const primaryCurrency = accounts[0]?.currency ?? DEFAULT_CURRENCY;
@@ -90,6 +92,29 @@ export default function Dashboard() {
         <h1 className="text-xl font-bold text-foreground tracking-tight">{getGreeting()}</h1>
         <p className="text-sm text-muted-foreground mt-0.5">{format(new Date(), 'EEEE, d MMMM')}</p>
       </div>
+
+      {/* Data Migration Prompt */}
+      {showPrompt && (
+        <Card className="mb-4 border-primary/30 bg-primary/5">
+          <CardContent className="py-4 px-5 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <CloudUpload className="h-5 w-5 text-primary shrink-0" />
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-foreground">Migrate local data to cloud</p>
+                <p className="text-xs text-muted-foreground">We found existing data on this device. Move it to your account?</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Button size="sm" onClick={runMigration} disabled={isMigrating} className="rounded-full text-xs">
+                {isMigrating ? 'Migrating...' : 'Migrate'}
+              </Button>
+              <button onClick={dismissMigration} className="p-1 text-muted-foreground hover:text-foreground">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Alerts */}
       <AlertsBanner />

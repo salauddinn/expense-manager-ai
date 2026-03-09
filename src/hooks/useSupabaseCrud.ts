@@ -37,7 +37,9 @@ export function useSupabaseCrud<T extends WithId>(tableName: string) {
 
   const addMutation = useMutation({
     mutationFn: async (item: Omit<T, 'id'>) => {
+      const { data: { session } } = await supabase.auth.getSession();
       const snakeItem = toSnakeCase(item as Record<string, unknown>);
+      snakeItem.user_id = session?.user?.id;
       const { data, error } = await supabase
         .from(tableName)
         .insert(snakeItem)
