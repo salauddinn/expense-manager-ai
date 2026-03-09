@@ -77,7 +77,7 @@ export default function Landing() {
             </div>
             <span className="text-lg font-extrabold tracking-tight text-foreground">FinTrack</span>
           </div>
-          <Link to="/dashboard">
+          <Link to="/signup">
             <Button size="sm" className="rounded-full px-5 gap-1.5 shadow-lg shadow-primary/20">
               Open App <ArrowRight className="h-3.5 w-3.5" />
             </Button>
