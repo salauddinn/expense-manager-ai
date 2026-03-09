@@ -57,14 +57,14 @@ export default function Goals() {
     setDialogOpen(false);
   };
 
-  const handleContribute = (id: string) => {
+  const handleContribute = async (id: string) => {
     const amount = parseFloat(contribAmount);
     if (!amount || amount <= 0) {
       toast.error('Enter a valid amount');
       return;
     }
     const goal = goals.find((g) => g.id === id);
-    const { newMilestones } = addContribution(id, amount);
+    const { newMilestones } = await addContribution(id, amount);
     toast.success(`Added ${formatCurrency(amount, 'INR')}!`);
     if (newMilestones.length > 0 && goal) {
       celebrate(newMilestones, goal.name);
@@ -73,12 +73,12 @@ export default function Goals() {
     setContribAmount('');
   };
 
-  const handleLinkTransaction = (goalId: string, txId: string) => {
+  const handleLinkTransaction = async (goalId: string, txId: string) => {
     const tx = transactions.find((t) => t.id === txId);
     const goal = goals.find((g) => g.id === goalId);
     if (!tx || !goal) return;
 
-    const { newMilestones } = linkTransaction(goalId, txId, tx.amount, tx.description);
+    const { newMilestones } = await linkTransaction(goalId, txId, tx.amount, tx.description);
     toast.success(`Linked "${tx.description}" — ${formatCurrency(tx.amount, tx.currency)} added`);
     if (newMilestones.length > 0) {
       celebrate(newMilestones, goal.name);
