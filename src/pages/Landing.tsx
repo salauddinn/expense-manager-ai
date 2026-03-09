@@ -327,9 +327,9 @@ export default function Landing() {
                 Start tracking today
               </h2>
               <p className="text-muted-foreground text-lg max-w-lg mx-auto mb-8">
-                No signup. No credit card. Just open the app and start chatting with your finances.
+                Free forever. No credit card needed. Just open the app and start chatting with your finances.
               </p>
-              <Link to="/dashboard">
+              <Link to="/signup">
                 <Button size="lg" className="rounded-full px-10 h-13 text-base gap-2 shadow-xl shadow-primary/25">
                   Launch FinTrack <ChevronRight className="h-4 w-4" />
                 </Button>
