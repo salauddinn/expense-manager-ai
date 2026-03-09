@@ -10,6 +10,7 @@ A mobile-first personal finance tracker with a smart chat interface for managing
 - **UI Library**: shadcn/ui (Radix primitives + Tailwind)
 - **Charts**: Recharts
 - **Routing**: React Router v6
+- **Package Manager**: Bun
 - **State**: Custom hooks + localStorage (migration-ready for cloud backend)
 
 ### Data Layer
