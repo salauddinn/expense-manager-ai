@@ -5,7 +5,7 @@
  */
 
 import { Transaction, BankAccount, CreditCard, Loan, Asset } from '@/types/finance';
-import { formatCurrency } from '@/lib/currencies';
+import { formatCurrency, DEFAULT_CURRENCY } from '@/lib/currencies';
 import { getCategoryInfo } from '@/lib/categories';
 import { CategoryType } from '@/types/finance';
 import { startOfDay, startOfWeek, startOfMonth, startOfYear, isAfter } from 'date-fns';
@@ -22,6 +22,7 @@ export interface FinancialData {
   cards: CreditCard[];
   loans: Loan[];
   assets: Asset[];
+  currency?: string;
 }
 
 const PERIOD_LABELS: Record<string, string> = {
@@ -42,8 +43,14 @@ function getPeriodStart(period: string): Date {
   return map[period] ?? startOfMonth(now);
 }
 
+function resolveCurrency(data: FinancialData): string {
+  if (data.currency) return data.currency;
+  return data.accounts[0]?.currency ?? DEFAULT_CURRENCY;
+}
+
 export function answerQuery(query: QueryParams, data: FinancialData): string {
   const { transactions, accounts, cards, loans, assets } = data;
+  const currency = resolveCurrency(data);
   const periodStart = getPeriodStart(query.period ?? 'this_month');
   const periodLabel = PERIOD_LABELS[query.period ?? 'this_month'] ?? 'this month';
 
@@ -56,12 +63,12 @@ export function answerQuery(query: QueryParams, data: FinancialData): string {
 
     return [
       '💰 **Your Financial Summary**\n',
-      `🏦 Bank Balance: **${formatCurrency(bankTotal, 'INR')}**`,
-      `💳 Credit Debt: **${formatCurrency(cardDebt, 'INR')}**`,
-      `🏠 Assets: **${formatCurrency(assetTotal, 'INR')}**`,
-      `📋 Loans: **${formatCurrency(loanDebt, 'INR')}**`,
+      `🏦 Bank Balance: **${formatCurrency(bankTotal, currency)}**`,
+      `💳 Credit Debt: **${formatCurrency(cardDebt, currency)}**`,
+      `🏠 Assets: **${formatCurrency(assetTotal, currency)}**`,
+      `📋 Loans: **${formatCurrency(loanDebt, currency)}**`,
       '',
-      `**Net Worth: ${formatCurrency(Math.abs(netWorth), 'INR')}** ${netWorth < 0 ? '(negative)' : ''}`,
+      `**Net Worth: ${formatCurrency(Math.abs(netWorth), currency)}** ${netWorth < 0 ? '(negative)' : ''}`,
     ].join('\n');
   }
 
@@ -81,10 +88,10 @@ export function answerQuery(query: QueryParams, data: FinancialData): string {
     : '';
 
   if (query.queryType === 'spending') {
-    return `📊 You spent **${formatCurrency(total, 'INR')}**${catLabel} ${periodLabel} across **${filtered.length}** transactions.`;
+    return `📊 You spent **${formatCurrency(total, currency)}**${catLabel} ${periodLabel} across **${filtered.length}** transactions.`;
   }
   if (query.queryType === 'income') {
-    return `📈 You earned **${formatCurrency(total, 'INR')}** ${periodLabel} across **${filtered.length}** transactions.`;
+    return `📈 You earned **${formatCurrency(total, currency)}** ${periodLabel} across **${filtered.length}** transactions.`;
   }
 
   const income = filtered.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0);
@@ -92,9 +99,9 @@ export function answerQuery(query: QueryParams, data: FinancialData): string {
 
   return [
     `📊 **Summary for ${periodLabel}**\n`,
-    `📈 Income: **${formatCurrency(income, 'INR')}**`,
-    `📉 Expenses: **${formatCurrency(expense, 'INR')}**`,
-    `💰 Net: **${formatCurrency(income - expense, 'INR')}**`,
+    `📈 Income: **${formatCurrency(income, currency)}**`,
+    `📉 Expenses: **${formatCurrency(expense, currency)}**`,
+    `💰 Net: **${formatCurrency(income - expense, currency)}**`,
     `📝 Transactions: **${filtered.length}**`,
   ].join('\n');
 }

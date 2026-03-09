@@ -5,6 +5,7 @@
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { AlertsBanner } from '@/components/AlertsBanner';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { TransactionRow } from '@/components/TransactionRow';
@@ -62,12 +63,14 @@ const VALUE_COLOR: Record<string, string> = {
 };
 
 export default function Dashboard() {
-  const { transactions } = useTransactions();
-  const { accounts } = useBankAccounts();
-  const { cards } = useCreditCards();
-  const { loans } = useLoans();
-  const { assets } = useAssets();
+  const { transactions, isLoading: txLoading } = useTransactions();
+  const { accounts, isLoading: accLoading } = useBankAccounts();
+  const { cards, isLoading: cardLoading } = useCreditCards();
+  const { loans, isLoading: loanLoading } = useLoans();
+  const { assets, isLoading: assetLoading } = useAssets();
   const { showPrompt, isMigrating, runMigration, dismissMigration } = useDataMigration();
+
+  const isLoading = txLoading || accLoading || cardLoading || loanLoading || assetLoading;
 
   // Use primary currency from first account, or default
   const primaryCurrency = accounts[0]?.currency ?? DEFAULT_CURRENCY;
@@ -93,6 +96,22 @@ export default function Dashboard() {
         <p className="text-sm text-muted-foreground mt-0.5">{format(new Date(), 'EEEE, d MMMM')}</p>
       </div>
 
+      {/* Loading State */}
+      {isLoading && (
+        <div className="space-y-4 mb-6">
+          <Skeleton className="h-28 w-full rounded-xl" />
+          <div className="grid grid-cols-2 gap-3">
+            <Skeleton className="h-20 rounded-xl" />
+            <Skeleton className="h-20 rounded-xl" />
+            <Skeleton className="h-20 rounded-xl" />
+            <Skeleton className="h-20 rounded-xl" />
+          </div>
+          <Skeleton className="h-48 w-full rounded-xl" />
+        </div>
+      )}
+
+      {!isLoading && (
+        <>
       {/* Data Migration Prompt */}
       {showPrompt && (
         <Card className="mb-4 border-primary/30 bg-primary/5">
@@ -207,6 +226,8 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+      </>
+      )}
     </AppLayout>
   );
 }

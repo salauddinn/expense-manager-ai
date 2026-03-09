@@ -33,7 +33,7 @@ function dbRowToMessage(row: Record<string, unknown>): ChatMessage {
     parsedIntent: (row.parsed_intent as ParsedIntent | null) ?? undefined,
     confirmed: row.confirmed as boolean | undefined,
     isLoading: (row.is_loading as boolean | null) ?? false,
-    timestamp: new Date(row.created_at as string).toISOString(),
+    timestamp: (row.created_at as string) ?? new Date().toISOString(),
   };
 }
 
@@ -346,16 +346,51 @@ export function useChatActions() {
   );
 
   const handleImageUpload = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file) return;
       if (!file.type.startsWith('image/')) {
         toast.error('Please upload an image file');
         return;
       }
-      const reader = new FileReader();
-      reader.onload = () => handleSend(reader.result as string);
-      reader.readAsDataURL(file);
+
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user?.id) {
+          toast.error('Please log in to upload images');
+          return;
+        }
+
+        const ext = file.name.split('.').pop() ?? 'jpg';
+        const filePath = `${session.user.id}/${Date.now()}.${ext}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('chat-images')
+          .upload(filePath, file, { contentType: file.type });
+
+        if (uploadError) {
+          logger.warn('[Chat] Storage upload failed, falling back to base64', uploadError.message);
+          // Fallback to base64 if storage bucket doesn't exist yet
+          const reader = new FileReader();
+          reader.onload = () => handleSend(reader.result as string);
+          reader.readAsDataURL(file);
+          e.target.value = '';
+          return;
+        }
+
+        const { data: urlData } = supabase.storage
+          .from('chat-images')
+          .getPublicUrl(filePath);
+
+        handleSend(urlData.publicUrl);
+      } catch (err) {
+        logger.error('[Chat] Image upload error', err);
+        // Fallback to base64
+        const reader = new FileReader();
+        reader.onload = () => handleSend(reader.result as string);
+        reader.readAsDataURL(file);
+      }
+
       e.target.value = '';
     },
     [handleSend],
@@ -372,10 +407,15 @@ export function useChatActions() {
   );
 
   const clearMessages = useCallback(async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user?.id) {
+      toast.error('Not authenticated');
+      return;
+    }
     const { error } = await supabase
       .from('chat_messages')
       .delete()
-      .neq('id', '00000000-0000-0000-0000-000000000000'); // delete all rows
+      .eq('user_id', session.user.id);
     if (!error) {
       setMessages([]);
       toast.success('Chat cleared');

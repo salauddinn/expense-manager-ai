@@ -77,7 +77,7 @@ export default function Landing() {
             </div>
             <span className="text-lg font-extrabold tracking-tight text-foreground">FinTrack</span>
           </div>
-          <Link to="/dashboard">
+          <Link to="/signup">
             <Button size="sm" className="rounded-full px-5 gap-1.5 shadow-lg shadow-primary/20">
               Open App <ArrowRight className="h-3.5 w-3.5" />
             </Button>
@@ -117,7 +117,7 @@ export default function Landing() {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link to="/dashboard">
+            <Link to="/signup">
               <Button size="lg" className="rounded-full px-8 h-12 text-base gap-2 shadow-xl shadow-primary/25 hover:shadow-2xl hover:shadow-primary/30 transition-all">
                 Get Started — It's Free <ArrowRight className="h-4 w-4" />
               </Button>
@@ -154,7 +154,7 @@ export default function Landing() {
               How it works
             </h2>
             <p className="text-muted-foreground text-lg max-w-xl mx-auto">
-              Three simple steps. No signup required.
+              Three simple steps. Free to get started.
             </p>
           </div>
 
@@ -327,9 +327,9 @@ export default function Landing() {
                 Start tracking today
               </h2>
               <p className="text-muted-foreground text-lg max-w-lg mx-auto mb-8">
-                No signup. No credit card. Just open the app and start chatting with your finances.
+                Free forever. No credit card needed. Just open the app and start chatting with your finances.
               </p>
-              <Link to="/dashboard">
+              <Link to="/signup">
                 <Button size="lg" className="rounded-full px-10 h-13 text-base gap-2 shadow-xl shadow-primary/25">
                   Launch FinTrack <ChevronRight className="h-4 w-4" />
                 </Button>
