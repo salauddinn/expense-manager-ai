@@ -57,14 +57,14 @@ export default function Goals() {
     setDialogOpen(false);
   };
 
-  const handleContribute = (id: string) => {
+  const handleContribute = async (id: string) => {
     const amount = parseFloat(contribAmount);
     if (!amount || amount <= 0) {
       toast.error('Enter a valid amount');
       return;
     }
     const goal = goals.find((g) => g.id === id);
-    const { newMilestones } = addContribution(id, amount);
+    const { newMilestones } = await addContribution(id, amount);
     toast.success(`Added ${formatCurrency(amount, 'INR')}!`);
     if (newMilestones.length > 0 && goal) {
       celebrate(newMilestones, goal.name);
