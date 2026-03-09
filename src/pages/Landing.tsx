@@ -154,7 +154,7 @@ export default function Landing() {
               How it works
             </h2>
             <p className="text-muted-foreground text-lg max-w-xl mx-auto">
-              Three simple steps. No signup required.
+              Three simple steps. Free to get started.
             </p>
           </div>
 
