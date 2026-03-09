@@ -33,7 +33,7 @@ function dbRowToMessage(row: Record<string, unknown>): ChatMessage {
     parsedIntent: (row.parsed_intent as ParsedIntent | null) ?? undefined,
     confirmed: row.confirmed as boolean | undefined,
     isLoading: (row.is_loading as boolean | null) ?? false,
-    timestamp: row.created_at ? new Date(row.created_at as string).getTime() : Date.now(),
+    timestamp: (row.created_at as string) ?? new Date().toISOString(),
   };
 }
 
