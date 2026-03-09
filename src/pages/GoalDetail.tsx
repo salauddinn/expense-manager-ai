@@ -59,7 +59,7 @@ export default function GoalDetail() {
   const handleContribute = () => {
     const amount = parseFloat(contribAmount);
     if (!amount || amount <= 0) { toast.error('Enter a valid amount'); return; }
-    const { newMilestones } = addContribution(goal.id, amount);
+    const { newMilestones } = await addContribution(goal.id, amount);
     toast.success(`Added ${formatCurrency(amount, goal.currency)}!`);
     if (newMilestones.length > 0) celebrate(newMilestones, goal.name);
     setContribAmount('');
