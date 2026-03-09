@@ -66,7 +66,7 @@ export default function GoalDetail() {
     setShowContrib(false);
   };
 
-  const handleLink = (txId: string) => {
+  const handleLink = async (txId: string) => {
     const tx = transactions.find((t) => t.id === txId);
     if (!tx) return;
     const { newMilestones } = await linkTransaction(goal.id, txId, tx.amount, tx.description);
