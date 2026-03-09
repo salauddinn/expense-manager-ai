@@ -63,12 +63,14 @@ const VALUE_COLOR: Record<string, string> = {
 };
 
 export default function Dashboard() {
-  const { transactions } = useTransactions();
-  const { accounts } = useBankAccounts();
-  const { cards } = useCreditCards();
-  const { loans } = useLoans();
-  const { assets } = useAssets();
+  const { transactions, isLoading: txLoading } = useTransactions();
+  const { accounts, isLoading: accLoading } = useBankAccounts();
+  const { cards, isLoading: cardLoading } = useCreditCards();
+  const { loans, isLoading: loanLoading } = useLoans();
+  const { assets, isLoading: assetLoading } = useAssets();
   const { showPrompt, isMigrating, runMigration, dismissMigration } = useDataMigration();
+
+  const isLoading = txLoading || accLoading || cardLoading || loanLoading || assetLoading;
 
   // Use primary currency from first account, or default
   const primaryCurrency = accounts[0]?.currency ?? DEFAULT_CURRENCY;
