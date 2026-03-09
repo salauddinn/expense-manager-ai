@@ -18,6 +18,18 @@ const LOCAL_STORAGE_KEYS = [
   'finance_chat_messages',
 ];
 
+const TABLE_MAP: Record<string, string> = {
+  bank_accounts: 'bank_accounts',
+  credit_cards: 'credit_cards',
+  transactions: 'transactions',
+  loans: 'loans',
+  assets: 'assets',
+  budget_goals: 'budget_goals',
+  financial_goals: 'financial_goals',
+  goal_contributions: 'goal_contributions',
+  chat_messages: 'chat_messages',
+};
+
 export async function exportBackup() {
   const data: Record<string, unknown> = {};
 
@@ -74,22 +86,52 @@ export async function exportBackup() {
 export function importBackup(file: File): Promise<{ success: boolean; keysRestored: number }> {
   return new Promise((resolve) => {
     const reader = new FileReader();
-    reader.onload = () => {
+    reader.onload = async () => {
       try {
         const data = JSON.parse(reader.result as string);
         let keysRestored = 0;
 
-        // Write to localStorage as staging (migration hook will pick it up)
-        LOCAL_STORAGE_KEYS.forEach((key) => {
-          if (data[key] !== undefined) {
-            localStorage.setItem(key, JSON.stringify(data[key]));
-            keysRestored++;
-          }
-        });
+        // Try upserting directly to Supabase
+        const { data: { session } } = await supabase.auth.getSession();
 
-        analytics.track('backup_imported', { keysRestored });
-        logger.info('[Backup] Import complete — reload page to trigger migration', { keysRestored });
-        resolve({ success: true, keysRestored });
+        if (session?.user?.id) {
+          for (const [key, tableName] of Object.entries(TABLE_MAP)) {
+            const rows = data[key];
+            if (!Array.isArray(rows) || rows.length === 0) continue;
+
+            // Ensure user_id is set on each row
+            const rowsWithUser = rows.map((row: Record<string, unknown>) => ({
+              ...row,
+              user_id: session.user.id,
+            }));
+
+            const { error } = await supabase
+              .from(tableName)
+              .upsert(rowsWithUser, { onConflict: 'id', ignoreDuplicates: true });
+
+            if (error) {
+              logger.warn(`[Backup] Failed to upsert ${tableName}`, error.message);
+            } else {
+              keysRestored++;
+            }
+          }
+
+          analytics.track('backup_imported', { keysRestored, target: 'supabase' });
+          logger.info('[Backup] Import to Supabase complete', { keysRestored });
+          resolve({ success: true, keysRestored });
+        } else {
+          // Fallback: write to localStorage (legacy path)
+          LOCAL_STORAGE_KEYS.forEach((key) => {
+            if (data[key] !== undefined) {
+              localStorage.setItem(key, JSON.stringify(data[key]));
+              keysRestored++;
+            }
+          });
+
+          analytics.track('backup_imported', { keysRestored, target: 'localStorage' });
+          logger.info('[Backup] Import to localStorage complete — reload to trigger migration', { keysRestored });
+          resolve({ success: true, keysRestored });
+        }
       } catch (err) {
         logger.error('[Backup] Import failed', err);
         resolve({ success: false, keysRestored: 0 });

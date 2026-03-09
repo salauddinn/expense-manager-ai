@@ -21,10 +21,16 @@ export function useSupabaseCrud<T extends WithId>(tableName: string) {
   const { data: items = [], isLoading } = useQuery({
     queryKey,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: { session } } = await supabase.auth.getSession();
+      let query = supabase
         .from(tableName)
-        .select('*')
-        .order('created_at', { ascending: false });
+        .select('*');
+
+      if (session?.user?.id) {
+        query = query.eq('user_id', session.user.id);
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false });
 
       if (error) {
         logger.error(`[SupabaseCrud] Fetch error on ${tableName}`, error.message);
