@@ -372,10 +372,15 @@ export function useChatActions() {
   );
 
   const clearMessages = useCallback(async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user?.id) {
+      toast.error('Not authenticated');
+      return;
+    }
     const { error } = await supabase
       .from('chat_messages')
       .delete()
-      .neq('id', '00000000-0000-0000-0000-000000000000'); // delete all rows
+      .eq('user_id', session.user.id);
     if (!error) {
       setMessages([]);
       toast.success('Chat cleared');
