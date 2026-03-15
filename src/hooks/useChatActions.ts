@@ -1,9 +1,8 @@
 /**
- * Chat business logic — extracted from Chat.tsx for maintainability.
- * Messages persisted to Supabase chat_messages table.
+ * Chat business logic — orchestrates message flow, LLM calls, and entity confirmation.
+ * Message persistence is delegated to useChatMessages.
  */
 import { useState, useRef, useCallback } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTransactions } from '@/hooks/useTransactions';
 import { useBankAccounts } from '@/hooks/useBankAccounts';
 import { useCreditCards } from '@/hooks/useCreditCards';
@@ -11,48 +10,27 @@ import { useAssets } from '@/hooks/useAssets';
 import { useLoans } from '@/hooks/useLoans';
 import { useBudgetGoals } from '@/hooks/useBudgetGoals';
 import { useLLMSettings } from '@/hooks/useLLMSettings';
+import { useChatMessages } from '@/hooks/useChatMessages';
 import { parseMessageFull, ParsedIntent } from '@/lib/chatParser';
 import { callLLM, mapLLMResultToIntent } from '@/lib/llmService';
-import { formatCurrency } from '@/lib/currencies';
-import { getCategoryInfo } from '@/lib/categories';
 import { answerQuery } from '@/lib/queryEngine';
+import { buildIntentResponse } from '@/lib/chatFormatter';
 import { ChatMessage, createMessage, HELP_TEXT } from '@/components/ChatComponents';
 import { supabase } from '@/lib/supabase';
 import { logger } from '@/lib/logger';
 import { analytics } from '@/lib/analytics';
+import {
+  CHAT_LOADING_PLACEHOLDER,
+  CHAT_RECEIPT_UPLOAD_MESSAGE,
+  CHAT_IMAGE_ONLY_LABEL,
+} from '@/lib/constants';
 import { toast } from 'sonner';
-
-const CHAT_QUERY_KEY = ['chat_messages'];
-
-function dbRowToMessage(row: Record<string, unknown>): ChatMessage {
-  return {
-    id: row.id as string,
-    role: row.role as 'user' | 'assistant',
-    content: row.content as string,
-    imageUrl: (row.image_url as string | null) ?? undefined,
-    parsedIntent: (row.parsed_intent as ParsedIntent | null) ?? undefined,
-    confirmed: row.confirmed as boolean | undefined,
-    isLoading: (row.is_loading as boolean | null) ?? false,
-    timestamp: (row.created_at as string) ?? new Date().toISOString(),
-  };
-}
 
 export function useChatActions() {
   const [input, setInput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
-  const queryClient = useQueryClient();
 
-  const { data: messages = [] } = useQuery({
-    queryKey: CHAT_QUERY_KEY,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('chat_messages')
-        .select('*')
-        .order('created_at', { ascending: true });
-      if (error) throw error;
-      return (data ?? []).map((row) => dbRowToMessage(row as Record<string, unknown>));
-    },
-  });
+  const { messages, persistMessage, updatePersistedMessage, setMessages, clearMessages: clearPersistedMessages } = useChatMessages();
 
   const { transactions, addTransaction } = useTransactions();
   const { accounts, addAccount, updateAccount } = useBankAccounts();
@@ -62,43 +40,9 @@ export function useChatActions() {
   const { addGoal } = useBudgetGoals();
   const { settings: llmSettings, isConfigured: isLLMConfigured } = useLLMSettings();
 
-  const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const financialData = { transactions, accounts, cards, loans, assets };
-
-  const persistMessage = useCallback(async (msg: ChatMessage) => {
-    const { data: { session } } = await supabase.auth.getSession();
-    const { error } = await supabase.from('chat_messages').insert({
-      id: msg.id,
-      role: msg.role,
-      content: msg.content,
-      image_url: msg.imageUrl ?? null,
-      parsed_intent: msg.parsedIntent ?? null,
-      confirmed: msg.confirmed ?? null,
-      is_loading: msg.isLoading ?? false,
-      user_id: session?.user?.id,
-    });
-    if (error) logger.error('[Chat] Failed to persist message', error.message);
-  }, []);
-
-  const updatePersistedMessage = useCallback(async (id: string, updates: Partial<ChatMessage>) => {
-    const dbUpdates: Record<string, unknown> = {};
-    if ('content' in updates) dbUpdates.content = updates.content;
-    if ('parsedIntent' in updates) dbUpdates.parsed_intent = updates.parsedIntent ?? null;
-    if ('confirmed' in updates) dbUpdates.confirmed = updates.confirmed ?? null;
-    if ('isLoading' in updates) dbUpdates.is_loading = updates.isLoading ?? false;
-
-    const { error } = await supabase.from('chat_messages').update(dbUpdates).eq('id', id);
-    if (error) logger.error('[Chat] Failed to update message', error.message);
-    queryClient.invalidateQueries({ queryKey: CHAT_QUERY_KEY });
-  }, [queryClient]);
-
-  const setMessages = useCallback((updater: ((prev: ChatMessage[]) => ChatMessage[]) | ChatMessage[]) => {
-    queryClient.setQueryData<ChatMessage[]>(CHAT_QUERY_KEY, (prev = []) =>
-      typeof updater === 'function' ? updater(prev) : updater
-    );
-  }, [queryClient]);
 
   const resolveLinkedSource = useCallback(
     (sourceName?: string, sourceIsCard?: boolean): { linkedAccountId?: string; linkedCardId?: string } => {
@@ -117,61 +61,19 @@ export function useChatActions() {
     [accounts, cards],
   );
 
-  const buildResponse = useCallback(
-    (parsed: ParsedIntent, imageUrl?: string): { content: string; parsedIntent?: ParsedIntent } => {
-      switch (parsed.intent) {
-        case 'transaction': {
-          const d = parsed.data;
-          const cashbackText = d.cashback ? ` with cashback **${formatCurrency(d.cashback, d.currency)}**` : '';
-          const sourceText = d.sourceName ? ` from **${d.sourceName}**` : '';
-          return {
-            content: `I detected a **${d.type}** of **${formatCurrency(d.amount, d.currency)}** in category **${getCategoryInfo(d.category).label}**${sourceText}${cashbackText}. Shall I save this?`,
-            parsedIntent: { intent: 'transaction', data: { ...d, receiptUrl: imageUrl } },
-          };
-        }
-        case 'bank_account': {
-          const d = parsed.data;
-          return {
-            content: `I'll add a **${d.type} account** "${d.name}" with balance **${formatCurrency(d.balance, d.currency)}**. Save it?`,
-            parsedIntent: parsed,
-          };
-        }
-        case 'credit_card': {
-          const d = parsed.data;
-          const outstandingText = d.outstanding ? ` and outstanding **${formatCurrency(d.outstanding, d.currency)}**` : '';
-          return {
-            content: `I'll add **${d.name}** with limit **${formatCurrency(d.limit, d.currency)}**${outstandingText}. Save it?`,
-            parsedIntent: parsed,
-          };
-        }
-        case 'asset': {
-          const d = parsed.data;
-          return {
-            content: `I'll add asset **"${d.name}"** (${d.type}) worth **${formatCurrency(d.value, d.currency)}**. Save it?`,
-            parsedIntent: parsed,
-          };
-        }
-        case 'loan': {
-          const d = parsed.data;
-          return {
-            content: `I'll add **${d.name}** of **${formatCurrency(d.principal, d.currency)}** at **${d.rate}%** for **${d.tenureMonths} months**. Save it?`,
-            parsedIntent: parsed,
-          };
-        }
-        case 'budget': {
-          const d = parsed.data;
-          return {
-            content: `I'll set a monthly budget of **${formatCurrency(d.monthlyLimit, d.currency)}** for **${getCategoryInfo(d.category).label}**. Save it?`,
-            parsedIntent: parsed,
-          };
-        }
-        case 'query':
-          return { content: answerQuery(parsed.data, financialData) };
-        default:
-          return { content: HELP_TEXT };
-      }
+  const resolveLoadingMessage = useCallback(
+    async (
+      loadingId: string,
+      content: string,
+      opts?: { parsedIntent?: ParsedIntent; confirmed?: boolean },
+    ) => {
+      const update = { content, isLoading: false, ...opts };
+      setMessages((prev) =>
+        prev.map((m) => m.id === loadingId ? { ...m, ...update } : m),
+      );
+      await updatePersistedMessage(loadingId, update);
     },
-    [financialData],
+    [setMessages, updatePersistedMessage],
   );
 
   const processWithLLM = useCallback(
@@ -181,49 +83,31 @@ export function useChatActions() {
         const mapped = mapLLMResultToIntent(result);
 
         if (mapped.intent === 'query') {
-          const content = result.message || answerQuery(mapped.data as any, financialData);
-          setMessages((prev) =>
-            prev.map((m) => m.id === loadingMsg.id ? { ...m, content, isLoading: false, confirmed: false } : m),
-          );
-          await updatePersistedMessage(loadingMsg.id, { content, isLoading: false, confirmed: false });
+          const content = result.message || answerQuery(mapped.data, financialData);
+          await resolveLoadingMessage(loadingMsg.id, content, { confirmed: false });
           return;
         }
 
         if (mapped.intent === 'unknown') {
           const content = result.message || HELP_TEXT;
-          setMessages((prev) =>
-            prev.map((m) => m.id === loadingMsg.id ? { ...m, content, isLoading: false, confirmed: false } : m),
-          );
-          await updatePersistedMessage(loadingMsg.id, { content, isLoading: false, confirmed: false });
+          await resolveLoadingMessage(loadingMsg.id, content, { confirmed: false });
           return;
         }
 
         const parsedIntent = mapped as ParsedIntent;
         if (parsedIntent.intent === 'transaction' && imageUrl) {
-          (parsedIntent.data as any).receiptUrl = imageUrl;
+          parsedIntent.data.receiptUrl = imageUrl;
         }
 
-        setMessages((prev) =>
-          prev.map((m) => m.id === loadingMsg.id ? { ...m, content: result.message, isLoading: false, parsedIntent, confirmed: undefined } : m),
-        );
-        await updatePersistedMessage(loadingMsg.id, { content: result.message, isLoading: false, parsedIntent });
+        await resolveLoadingMessage(loadingMsg.id, result.message, { parsedIntent });
       } catch (error) {
         logger.error('LLM call failed', error instanceof Error ? error.message : error);
         const parsed = parseMessageFull(text);
-        const { content, parsedIntent } = buildResponse(parsed, imageUrl);
+        const { content, parsedIntent } = buildIntentResponse(parsed, financialData, imageUrl);
         const isActionable = parsed.intent !== 'query' && parsed.intent !== 'unknown';
         const finalContent = `⚠️ AI unavailable, using smart parser:\n\n${content}`;
 
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === loadingMsg.id
-              ? { ...m, content: finalContent, isLoading: false, parsedIntent: isActionable ? parsedIntent : undefined, confirmed: isActionable ? undefined : false }
-              : m,
-          ),
-        );
-        await updatePersistedMessage(loadingMsg.id, {
-          content: finalContent,
-          isLoading: false,
+        await resolveLoadingMessage(loadingMsg.id, finalContent, {
           parsedIntent: isActionable ? parsedIntent : undefined,
           confirmed: isActionable ? undefined : false,
         });
@@ -232,7 +116,7 @@ export function useChatActions() {
         setIsProcessing(false);
       }
     },
-    [llmSettings, financialData, buildResponse, setMessages, updatePersistedMessage],
+    [llmSettings, financialData, resolveLoadingMessage],
   );
 
   const handleSend = useCallback(
@@ -242,10 +126,10 @@ export function useChatActions() {
 
       logger.info('[Chat] Message sent', { hasText: !!text, hasImage: !!imageUrl, mode: isLLMConfigured ? 'llm' : 'rule' });
       analytics.track('chat_message_sent', { mode: isLLMConfigured ? 'llm' : 'rule', hasImage: !!imageUrl });
-      const userMsg = createMessage('user', text || '📷 Receipt uploaded', { imageUrl });
+      const userMsg = createMessage('user', text || CHAT_IMAGE_ONLY_LABEL, { imageUrl });
 
       if (imageUrl && !text) {
-        const assistantMsg = createMessage('assistant', '📷 Receipt received! Please describe the transaction (e.g., "spent ₹500 on groceries") so I can save it.');
+        const assistantMsg = createMessage('assistant', CHAT_RECEIPT_UPLOAD_MESSAGE);
         setMessages((prev) => [...prev, userMsg, assistantMsg]);
         persistMessage(userMsg);
         persistMessage(assistantMsg);
@@ -254,7 +138,7 @@ export function useChatActions() {
       }
 
       if (isLLMConfigured) {
-        const loadingMsg = createMessage('assistant', 'Thinking...', { isLoading: true });
+        const loadingMsg = createMessage('assistant', CHAT_LOADING_PLACEHOLDER, { isLoading: true });
         setMessages((prev) => [...prev, userMsg, loadingMsg]);
         persistMessage(userMsg);
         persistMessage(loadingMsg);
@@ -265,7 +149,7 @@ export function useChatActions() {
       }
 
       const parsed = parseMessageFull(text);
-      const { content, parsedIntent } = buildResponse(parsed, imageUrl);
+      const { content, parsedIntent } = buildIntentResponse(parsed, financialData, imageUrl);
       const isActionable = parsed.intent !== 'query' && parsed.intent !== 'unknown';
       const assistantMsg = createMessage('assistant', content, {
         parsedIntent: isActionable ? parsedIntent : undefined,
@@ -277,7 +161,7 @@ export function useChatActions() {
       persistMessage(assistantMsg);
       setInput('');
     },
-    [input, isLLMConfigured, buildResponse, processWithLLM, setMessages, persistMessage],
+    [input, isLLMConfigured, processWithLLM, setMessages, persistMessage, financialData],
   );
 
   const handleConfirm = useCallback(
@@ -296,7 +180,7 @@ export function useChatActions() {
 
       switch (intent.intent) {
         case 'transaction': {
-          const { type, amount, currency, category, description, date, receiptUrl, sourceName, sourceIsCard, cashback } = intent.data as any;
+          const { type, amount, currency, category, description, date, receiptUrl, sourceName, sourceIsCard, cashback } = intent.data;
           const linkedIds = resolveLinkedSource(sourceName, sourceIsCard);
           addTransaction({ type, amount, currency, category, description, date, receiptUrl, ...linkedIds, ...(cashback && { cashback }) });
           if (linkedIds.linkedAccountId) {
@@ -370,7 +254,6 @@ export function useChatActions() {
 
         if (uploadError) {
           logger.warn('[Chat] Storage upload failed, falling back to base64', uploadError.message);
-          // Fallback to base64 if storage bucket doesn't exist yet
           const reader = new FileReader();
           reader.onload = () => handleSend(reader.result as string);
           reader.readAsDataURL(file);
@@ -385,7 +268,6 @@ export function useChatActions() {
         handleSend(urlData.publicUrl);
       } catch (err) {
         logger.error('[Chat] Image upload error', err);
-        // Fallback to base64
         const reader = new FileReader();
         reader.onload = () => handleSend(reader.result as string);
         reader.readAsDataURL(file);
@@ -407,24 +289,17 @@ export function useChatActions() {
   );
 
   const clearMessages = useCallback(async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.user?.id) {
-      toast.error('Not authenticated');
-      return;
-    }
-    const { error } = await supabase
-      .from('chat_messages')
-      .delete()
-      .eq('user_id', session.user.id);
-    if (!error) {
-      setMessages([]);
+    const success = await clearPersistedMessages();
+    if (success) {
       toast.success('Chat cleared');
+    } else {
+      toast.error('Not authenticated');
     }
-  }, [setMessages]);
+  }, [clearPersistedMessages]);
 
   return {
     messages, input, setInput, isProcessing, isLLMConfigured,
-    bottomRef, fileInputRef,
+    fileInputRef,
     handleSend, handleConfirm, handleReject,
     handleImageUpload, handleKeyDown, clearMessages,
   };

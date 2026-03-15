@@ -5,8 +5,10 @@
 
 import { LLMProvider } from '@/hooks/useLLMSettings';
 import { CategoryType, TransactionType } from '@/types/finance';
+import type { ParsedIntent } from '@/lib/chatParser';
 import { logger } from '@/lib/logger';
 import { supabase } from '@/lib/supabase';
+import { DEFAULT_CURRENCY, DEFAULT_LOAN_INTEREST_RATE, DEFAULT_LOAN_TENURE_MONTHS } from '@/lib/constants';
 
 // ── Types ──
 
@@ -264,13 +266,18 @@ async function callGemini(
     throw new Error(`Gemini API error (${response.status}): ${error}`);
   }
 
+  interface GeminiPart {
+    functionCall?: { name: string; args: Record<string, unknown> };
+    text?: string;
+  }
+
   const data = await response.json();
-  const parts = data.candidates?.[0]?.content?.parts ?? [];
-  const fnCall = parts.find((p: any) => p.functionCall);
+  const parts: GeminiPart[] = data.candidates?.[0]?.content?.parts ?? [];
+  const fnCall = parts.find((p) => p.functionCall);
 
   if (!fnCall) {
     logger.warn('[LLM] Gemini returned no function call');
-    const textPart = parts.find((p: any) => p.text);
+    const textPart = parts.find((p) => p.text);
     return {
       intent: 'unknown',
       data: {},
@@ -338,110 +345,126 @@ export async function callLLM(
   }
 }
 
-/** Map LLM tool call result → ParsedIntent compatible format. */
-export function mapLLMResultToIntent(result: LLMParsedResult) {
-  const { intent, data } = result;
+// ── Intent Builder Functions ──
+// Each builder maps the raw LLM data record to a strongly-typed ParsedIntent variant.
 
-  const intentMap: Record<string, string> = {
-    add_transaction: 'transaction',
-    add_bank_account: 'bank_account',
-    add_credit_card: 'credit_card',
-    add_asset: 'asset',
-    add_loan: 'loan',
-    set_budget: 'budget',
-    answer_query: 'query',
+function buildTransactionIntent(data: Record<string, unknown>): ParsedIntent {
+  return {
+    intent: 'transaction',
+    data: {
+      type: (data.type as TransactionType) ?? 'expense',
+      amount: (data.amount as number) ?? 0,
+      currency: (data.currency as string) ?? DEFAULT_CURRENCY,
+      category: (data.category as CategoryType) ?? 'other',
+      description: (data.description as string) ?? '',
+      date: new Date().toISOString(),
+      ...(data.cashback && { cashback: data.cashback as number }),
+    },
   };
+}
 
-  const mappedIntent = intentMap[intent] ?? 'unknown';
-  logger.debug('[LLM] Mapped intent', { raw: intent, mapped: mappedIntent });
+function buildBankAccountIntent(data: Record<string, unknown>): ParsedIntent {
+  return {
+    intent: 'bank_account',
+    data: {
+      name: (data.name as string) ?? 'Account',
+      type: (data.type as 'savings' | 'current' | 'salary' | 'cash') ?? 'savings',
+      balance: (data.balance as number) ?? 0,
+      currency: (data.currency as string) ?? DEFAULT_CURRENCY,
+    },
+  };
+}
 
-  if (mappedIntent === 'transaction') {
-    return {
-      intent: 'transaction' as const,
-      data: {
-        type: (data.type as TransactionType) ?? 'expense',
-        amount: (data.amount as number) ?? 0,
-        currency: (data.currency as string) ?? 'INR',
-        category: (data.category as CategoryType) ?? 'other',
-        description: (data.description as string) ?? '',
-        date: new Date().toISOString(),
-        ...(data.cashback && { cashback: data.cashback as number }),
-      },
-    };
-  }
+function buildCreditCardIntent(data: Record<string, unknown>): ParsedIntent {
+  return {
+    intent: 'credit_card',
+    data: {
+      name: (data.name as string) ?? 'Credit Card',
+      limit: (data.limit as number) ?? 0,
+      outstanding: (data.outstanding as number) ?? 0,
+      dueDate: new Date().toISOString(),
+      currency: (data.currency as string) ?? DEFAULT_CURRENCY,
+    },
+  };
+}
 
-  if (mappedIntent === 'bank_account') {
-    return {
-      intent: 'bank_account' as const,
-      data: {
-        name: (data.name as string) ?? 'Account',
-        type: (data.type as 'savings' | 'current' | 'salary' | 'cash') ?? 'savings',
-        balance: (data.balance as number) ?? 0,
-        currency: (data.currency as string) ?? 'INR',
-      },
-    };
-  }
+function buildAssetIntent(data: Record<string, unknown>): ParsedIntent {
+  return {
+    intent: 'asset',
+    data: {
+      name: (data.name as string) ?? 'Asset',
+      type: (data.type as 'property' | 'investment' | 'vehicle' | 'other') ?? 'other',
+      value: (data.value as number) ?? 0,
+      currency: (data.currency as string) ?? DEFAULT_CURRENCY,
+    },
+  };
+}
 
-  if (mappedIntent === 'credit_card') {
-    return {
-      intent: 'credit_card' as const,
-      data: {
-        name: (data.name as string) ?? 'Credit Card',
-        limit: (data.limit as number) ?? 0,
-        outstanding: (data.outstanding as number) ?? 0,
-        dueDate: new Date().toISOString(),
-        currency: (data.currency as string) ?? 'INR',
-      },
-    };
-  }
+function buildLoanIntent(data: Record<string, unknown>): ParsedIntent {
+  return {
+    intent: 'loan',
+    data: {
+      name: (data.name as string) ?? 'Loan',
+      principal: (data.principal as number) ?? 0,
+      rate: (data.rate as number) ?? DEFAULT_LOAN_INTEREST_RATE,
+      tenureMonths: (data.tenureMonths as number) ?? DEFAULT_LOAN_TENURE_MONTHS,
+      startDate: new Date().toISOString(),
+      currency: (data.currency as string) ?? DEFAULT_CURRENCY,
+    },
+  };
+}
 
-  if (mappedIntent === 'asset') {
-    return {
-      intent: 'asset' as const,
-      data: {
-        name: (data.name as string) ?? 'Asset',
-        type: (data.type as 'property' | 'investment' | 'vehicle' | 'other') ?? 'other',
-        value: (data.value as number) ?? 0,
-        currency: (data.currency as string) ?? 'INR',
-      },
-    };
-  }
+function buildBudgetIntent(data: Record<string, unknown>): ParsedIntent {
+  return {
+    intent: 'budget',
+    data: {
+      category: (data.category as CategoryType) ?? 'other',
+      monthlyLimit: (data.monthlyLimit as number) ?? 0,
+      currency: (data.currency as string) ?? DEFAULT_CURRENCY,
+    },
+  };
+}
 
-  if (mappedIntent === 'loan') {
-    return {
-      intent: 'loan' as const,
-      data: {
-        name: (data.name as string) ?? 'Loan',
-        principal: (data.principal as number) ?? 0,
-        rate: (data.rate as number) ?? 8.5,
-        tenureMonths: (data.tenureMonths as number) ?? 60,
-        startDate: new Date().toISOString(),
-        currency: (data.currency as string) ?? 'INR',
-      },
-    };
-  }
+function buildQueryIntent(data: Record<string, unknown>): ParsedIntent {
+  return {
+    intent: 'query',
+    data: {
+      queryType: (data.queryType as string) ?? 'summary',
+      category: data.category as string | undefined,
+      period: (data.period as string) ?? 'this_month',
+    },
+  };
+}
 
-  if (mappedIntent === 'budget') {
-    return {
-      intent: 'budget' as const,
-      data: {
-        category: (data.category as CategoryType) ?? 'other',
-        monthlyLimit: (data.monthlyLimit as number) ?? 0,
-        currency: (data.currency as string) ?? 'INR',
-      },
-    };
-  }
+/** Maps an LLM tool name to its domain intent name. */
+const LLM_INTENT_MAP: Record<string, string> = {
+  add_transaction: 'transaction',
+  add_bank_account: 'bank_account',
+  add_credit_card: 'credit_card',
+  add_asset: 'asset',
+  add_loan: 'loan',
+  set_budget: 'budget',
+  answer_query: 'query',
+};
 
-  if (mappedIntent === 'query') {
-    return {
-      intent: 'query' as const,
-      data: {
-        queryType: (data.queryType as string) ?? 'summary',
-        category: data.category as string | undefined,
-        period: (data.period as string) ?? 'this_month',
-      },
-    };
-  }
+/** Lookup table mapping a domain intent name to its builder function. */
+const INTENT_BUILDERS: Record<string, (data: Record<string, unknown>) => ParsedIntent> = {
+  transaction: buildTransactionIntent,
+  bank_account: buildBankAccountIntent,
+  credit_card: buildCreditCardIntent,
+  asset: buildAssetIntent,
+  loan: buildLoanIntent,
+  budget: buildBudgetIntent,
+  query: buildQueryIntent,
+};
 
-  return { intent: 'unknown' as const, data: null };
+/** Maps an LLM tool call result to a strongly-typed ParsedIntent. */
+export function mapLLMResultToIntent(result: LLMParsedResult): ParsedIntent | { intent: 'unknown'; data: null } {
+  const mappedIntent = LLM_INTENT_MAP[result.intent] ?? 'unknown';
+  logger.debug('[LLM] Mapped intent', { raw: result.intent, mapped: mappedIntent });
+
+  const builder = INTENT_BUILDERS[mappedIntent];
+  if (!builder) return { intent: 'unknown', data: null };
+
+  return builder(result.data);
 }

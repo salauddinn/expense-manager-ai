@@ -6,6 +6,7 @@
 
 import { supabase } from './supabase';
 import { toSnakeCase } from './dbMapper';
+import { FINANCE_STORAGE_KEYS } from './constants';
 import { logger } from './logger';
 
 interface MigrationResult {
@@ -26,17 +27,7 @@ function readLocalStorage<T>(key: string): T[] {
 }
 
 export function hasLocalStorageData(): boolean {
-  const keys = [
-    'finance_bank_accounts',
-    'finance_credit_cards',
-    'finance_transactions',
-    'finance_loans',
-    'finance_assets',
-    'finance_budget_goals',
-    'finance_goals',
-    'finance_chat_messages',
-  ];
-  return keys.some((key) => {
+  return FINANCE_STORAGE_KEYS.some((key) => {
     const raw = localStorage.getItem(key);
     if (!raw) return false;
     try {
@@ -150,16 +141,6 @@ export async function migrateLocalStorageToSupabase(): Promise<MigrationResult> 
 }
 
 export function clearLocalStorageData(): void {
-  const keys = [
-    'finance_bank_accounts',
-    'finance_credit_cards',
-    'finance_transactions',
-    'finance_loans',
-    'finance_assets',
-    'finance_budget_goals',
-    'finance_goals',
-    'finance_chat_messages',
-  ];
-  keys.forEach((key) => localStorage.removeItem(key));
+  FINANCE_STORAGE_KEYS.forEach((key) => localStorage.removeItem(key));
   logger.info('[Migration] localStorage cleared');
 }

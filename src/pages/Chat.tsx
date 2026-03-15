@@ -2,25 +2,27 @@
  * Chat Page — Smart financial assistant.
  * Business logic extracted to useChatActions hook.
  */
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useChatActions } from '@/hooks/useChatActions';
 import { needsConfirmation, EmptyState, MessageBubble } from '@/components/ChatComponents';
-import { Send, ImagePlus, Sparkles, Loader2, Trash2 } from 'lucide-react';
+import { Send, ImagePlus, Sparkles, Loader as Loader2, Trash2 } from 'lucide-react';
 
 export default function Chat() {
   const {
     messages, input, setInput, isProcessing, isLLMConfigured,
-    bottomRef, fileInputRef,
+    fileInputRef,
     handleSend, handleConfirm, handleReject,
     handleImageUpload, handleKeyDown, clearMessages,
   } = useChatActions();
 
+  const bottomRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, bottomRef]);
+  }, [messages]);
 
   return (
     <AppLayout>

@@ -3,20 +3,10 @@
  * Exports from Supabase (primary) with localStorage fallback.
  */
 import { supabase } from './supabase';
+import { triggerFileDownload } from './shared';
+import { BACKUP_FILENAME_PREFIX, FINANCE_STORAGE_KEYS } from './constants';
 import { logger } from './logger';
 import { analytics } from './analytics';
-
-const LOCAL_STORAGE_KEYS = [
-  'finance_transactions',
-  'finance_bank_accounts',
-  'finance_credit_cards',
-  'finance_assets',
-  'finance_loans',
-  'finance_budget_goals',
-  'finance_goals',
-  'finance_llm_settings',
-  'finance_chat_messages',
-];
 
 const TABLE_MAP: Record<string, string> = {
   bank_accounts: 'bank_accounts',
@@ -30,11 +20,11 @@ const TABLE_MAP: Record<string, string> = {
   chat_messages: 'chat_messages',
 };
 
+/** Exports all user data as a JSON file and triggers a browser download. */
 export async function exportBackup() {
   const data: Record<string, unknown> = {};
 
   try {
-    // Try Supabase first
     const [accounts, cards, transactions, loans, assets, budgetGoals, goals, contributions, chatMessages] = await Promise.all([
       supabase.from('bank_accounts').select('*'),
       supabase.from('credit_cards').select('*'),
@@ -57,9 +47,8 @@ export async function exportBackup() {
     data['goal_contributions'] = contributions.data ?? [];
     data['chat_messages'] = chatMessages.data ?? [];
   } catch (err) {
-    // Fallback to localStorage
     logger.warn('[Backup] Supabase export failed, falling back to localStorage', err);
-    LOCAL_STORAGE_KEYS.forEach((key) => {
+    FINANCE_STORAGE_KEYS.forEach((key) => {
       const raw = localStorage.getItem(key);
       if (raw) {
         try {
@@ -72,18 +61,20 @@ export async function exportBackup() {
   }
 
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = `fintrack_backup_${new Date().toISOString().slice(0, 10)}.json`;
-  link.click();
-  URL.revokeObjectURL(url);
+  triggerFileDownload(blob, `${BACKUP_FILENAME_PREFIX}${new Date().toISOString().slice(0, 10)}.json`);
 
   analytics.track('backup_exported');
   logger.info('[Backup] Export complete', { keys: Object.keys(data).length });
 }
 
-export function importBackup(file: File): Promise<{ success: boolean; keysRestored: number }> {
+export interface ImportBackupResult {
+  success: boolean;
+  keysRestored: number;
+  errorMessage?: string;
+}
+
+/** Reads a JSON backup file and restores its data to Supabase (or localStorage as fallback). */
+export function importBackup(file: File): Promise<ImportBackupResult> {
   return new Promise((resolve) => {
     const reader = new FileReader();
     reader.onload = async () => {
@@ -91,7 +82,6 @@ export function importBackup(file: File): Promise<{ success: boolean; keysRestor
         const data = JSON.parse(reader.result as string);
         let keysRestored = 0;
 
-        // Try upserting directly to Supabase
         const { data: { session } } = await supabase.auth.getSession();
 
         if (session?.user?.id) {
@@ -99,7 +89,6 @@ export function importBackup(file: File): Promise<{ success: boolean; keysRestor
             const rows = data[key];
             if (!Array.isArray(rows) || rows.length === 0) continue;
 
-            // Ensure user_id is set on each row
             const rowsWithUser = rows.map((row: Record<string, unknown>) => ({
               ...row,
               user_id: session.user.id,
@@ -120,8 +109,7 @@ export function importBackup(file: File): Promise<{ success: boolean; keysRestor
           logger.info('[Backup] Import to Supabase complete', { keysRestored });
           resolve({ success: true, keysRestored });
         } else {
-          // Fallback: write to localStorage (legacy path)
-          LOCAL_STORAGE_KEYS.forEach((key) => {
+          FINANCE_STORAGE_KEYS.forEach((key) => {
             if (data[key] !== undefined) {
               localStorage.setItem(key, JSON.stringify(data[key]));
               keysRestored++;
@@ -133,11 +121,12 @@ export function importBackup(file: File): Promise<{ success: boolean; keysRestor
           resolve({ success: true, keysRestored });
         }
       } catch (err) {
-        logger.error('[Backup] Import failed', err);
-        resolve({ success: false, keysRestored: 0 });
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error during import';
+        logger.error('[Backup] Import failed', errorMessage);
+        resolve({ success: false, keysRestored: 0, errorMessage });
       }
     };
-    reader.onerror = () => resolve({ success: false, keysRestored: 0 });
+    reader.onerror = () => resolve({ success: false, keysRestored: 0, errorMessage: 'Failed to read file' });
     reader.readAsText(file);
   });
 }

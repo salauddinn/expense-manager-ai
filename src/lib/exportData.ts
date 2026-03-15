@@ -1,9 +1,12 @@
 import { Transaction } from '@/types/finance';
 import { format } from 'date-fns';
 import { getCategoryInfo } from './categories';
+import { triggerFileDownload } from './shared';
+import { EXPORT_CSV_FILENAME_PREFIX } from './constants';
 import { logger } from './logger';
 import { analytics } from './analytics';
 
+/** Generates a CSV file of the provided transactions and triggers a browser download. */
 export function exportTransactionsCSV(transactions: Transaction[]) {
   logger.info('[Export] Generating CSV', { count: transactions.length });
 
@@ -19,12 +22,7 @@ export function exportTransactionsCSV(transactions: Transaction[]) {
 
   const csv = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = `transactions_${format(new Date(), 'yyyy-MM-dd')}.csv`;
-  link.click();
-  URL.revokeObjectURL(url);
+  triggerFileDownload(blob, `${EXPORT_CSV_FILENAME_PREFIX}${format(new Date(), 'yyyy-MM-dd')}.csv`);
 
   analytics.track('csv_exported', { transactionCount: transactions.length });
   logger.info('[Export] CSV download triggered');

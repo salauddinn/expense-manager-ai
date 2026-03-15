@@ -7,6 +7,19 @@ export function sumBy<T>(items: T[], getter: (item: T) => number): number {
   return items.reduce((total, item) => total + getter(item), 0);
 }
 
+/**
+ * Triggers a browser file download for the given Blob.
+ * Handles object URL lifecycle (create → click → revoke).
+ */
+export function triggerFileDownload(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 /** Shared Recharts tooltip style using design tokens. */
 export const CHART_TOOLTIP_STYLE: React.CSSProperties = {
   backgroundColor: 'hsl(var(--card))',

@@ -4,10 +4,11 @@
  * - apiKey stored only in localStorage (never sent to DB)
  */
 
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocalStorage } from './useLocalStorage';
 import { supabase } from '@/lib/supabase';
+import { LLM_SETTINGS_STORAGE_KEY } from '@/lib/constants';
 import { logger } from '@/lib/logger';
 import { analytics } from '@/lib/analytics';
 
@@ -43,7 +44,7 @@ export function useLLMSettings() {
   const queryKey = ['llm_settings'];
 
   // API key stays local only — never persisted to DB
-  const [apiKey, setApiKey] = useLocalStorage<string>('finance_llm_api_key', '');
+  const [apiKey, setApiKey] = useLocalStorage<string>(LLM_SETTINGS_STORAGE_KEY, '');
 
   const { data: dbSettings } = useQuery({
     queryKey,
