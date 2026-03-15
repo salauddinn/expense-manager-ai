@@ -24,6 +24,7 @@ const GoalDetail = lazy(() => import("./pages/GoalDetail"));
 const Install = lazy(() => import("./pages/Install"));
 const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
 const TermsConditions = lazy(() => import("./pages/TermsConditions"));
+const Recurring = lazy(() => import("./pages/Recurring"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
@@ -57,6 +58,7 @@ const App = () => (
                   <Route path="/insights" element={<Insights />} />
                   <Route path="/goals" element={<Goals />} />
                   <Route path="/goals/:id" element={<GoalDetail />} />
+                  <Route path="/recurring" element={<Recurring />} />
                   <Route path="/install" element={<Install />} />
                 </Route>
 

@@ -15,7 +15,7 @@ import { useAssets } from '@/hooks/useAssets';
 import { formatCurrency } from '@/lib/currencies';
 import { exportBackup, importBackup } from '@/lib/backup';
 import { AddBankDialog, AddCardDialog, AddAssetDialog } from '@/components/AddEntityDialogs';
-import { Trash2, ChevronRight, Calculator, List, CircleDollarSign, Download as DownloadIcon, Upload, MessageSquare } from 'lucide-react';
+import { Trash2, ChevronRight, Calculator, List, CircleDollarSign, Download as DownloadIcon, Upload, MessageSquare, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function Accounts() {
@@ -47,6 +47,7 @@ export default function Accounts() {
           <CardContent className="py-1 px-4">
             <div className="divide-y divide-border">
               <QuickLink to="/transactions" icon={<List className="h-4 w-4" />} label="Transaction History" />
+              <QuickLink to="/recurring" icon={<RefreshCw className="h-4 w-4" />} label="Recurring Transactions" />
               <QuickLink to="/budget" icon={<CircleDollarSign className="h-4 w-4" />} label="Budget Goals" />
               <QuickLink to="/loan-calculator" icon={<Calculator className="h-4 w-4" />} label="Loan Calculator" />
               <QuickLink to="/install" icon={<DownloadIcon className="h-4 w-4" />} label="Install App" />
