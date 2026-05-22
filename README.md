@@ -2,6 +2,12 @@
 
 A mobile-first personal finance tracker with a smart chat interface for managing income, expenses, bank accounts, credit cards, loans, assets, and budgets via natural language.
 
+## Preview
+
+| Dashboard | Chat Interface |
+|---|---|
+| ![Dashboard](docs/screenshots/dashboard.png) | ![Chat Interface](docs/screenshots/chat.png) |
+
 ## Features
 
 - 💬 **Chat to Track** — Type "spent ₹500 on groceries" and it's saved
