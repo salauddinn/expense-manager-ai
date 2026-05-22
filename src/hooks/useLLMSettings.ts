@@ -39,20 +39,18 @@ export const PROVIDER_MODELS: Record<LLMProvider, { value: string; label: string
   ],
 };
 
+const QUERY_KEY = ['llm_settings'];
+
 export function useLLMSettings() {
   const queryClient = useQueryClient();
-  const queryKey = ['llm_settings'];
 
   // API key stays local only — never persisted to DB
   const [apiKey, setApiKey] = useLocalStorage<string>(LLM_SETTINGS_STORAGE_KEY, '');
 
   const { data: dbSettings } = useQuery({
-    queryKey,
+    queryKey: QUERY_KEY,
     queryFn: async () => {
-      const { data } = await supabase
-        .from('llm_settings')
-        .select('provider, model')
-        .maybeSingle();
+      const { data } = await supabase.from('llm_settings').select('provider, model').maybeSingle();
       return data as { provider: LLMProvider; model: string } | null;
     },
   });
@@ -85,12 +83,12 @@ export function useLLMSettings() {
       }
 
       if (Object.keys(dbUpdates).length > 0) {
-        const { data: { session } } = await supabase.auth.getSession();
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
         dbUpdates.user_id = session?.user?.id;
-        await supabase
-          .from('llm_settings')
-          .upsert(dbUpdates, { onConflict: 'user_id' });
-        queryClient.invalidateQueries({ queryKey });
+        await supabase.from('llm_settings').upsert(dbUpdates, { onConflict: 'user_id' });
+        queryClient.invalidateQueries({ queryKey: QUERY_KEY });
       }
     },
     [setApiKey, queryClient],

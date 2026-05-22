@@ -5,12 +5,13 @@ import { supabase } from '@/lib/supabase';
 import { toCamelCase } from '@/lib/dbMapper';
 import { logger } from '@/lib/logger';
 
+const QUERY_KEY = ['budget_goals'];
+
 export function useBudgetGoals() {
   const queryClient = useQueryClient();
-  const queryKey = ['budget_goals'];
 
   const { data: goals = [], isLoading } = useQuery({
-    queryKey,
+    queryKey: QUERY_KEY,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('budget_goals')
@@ -25,7 +26,9 @@ export function useBudgetGoals() {
   const addGoal = useCallback(
     async (category: CategoryType, monthlyLimit: number, currency: string = 'INR') => {
       logger.info('[BudgetGoals] Upsert', { category, monthlyLimit });
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       const { error } = await supabase
         .from('budget_goals')
         .upsert(
@@ -38,7 +41,7 @@ export function useBudgetGoals() {
         throw error;
       }
 
-      queryClient.invalidateQueries({ queryKey });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEY });
     },
     [queryClient],
   );
@@ -48,7 +51,7 @@ export function useBudgetGoals() {
       logger.info('[BudgetGoals] Delete', id);
       const { error } = await supabase.from('budget_goals').delete().eq('id', id);
       if (error) throw error;
-      queryClient.invalidateQueries({ queryKey });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEY });
     },
     [queryClient],
   );

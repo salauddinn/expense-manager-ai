@@ -6,7 +6,12 @@ import { toCamelCase } from '@/lib/dbMapper';
 import { logger } from '@/lib/logger';
 import { analytics } from '@/lib/analytics';
 
-export const GOAL_CATEGORIES: { value: GoalCategory; label: string; icon: string; color: string }[] = [
+export const GOAL_CATEGORIES: {
+  value: GoalCategory;
+  label: string;
+  icon: string;
+  color: string;
+}[] = [
   { value: 'emergency', label: 'Emergency Fund', icon: '🚨', color: 'hsl(0, 72%, 51%)' },
   { value: 'travel', label: 'Travel', icon: '✈️', color: 'hsl(190, 70%, 45%)' },
   { value: 'education', label: 'Education', icon: '📚', color: 'hsl(230, 75%, 58%)' },
@@ -18,7 +23,9 @@ export const GOAL_CATEGORIES: { value: GoalCategory; label: string; icon: string
 ];
 
 export function getGoalCategoryInfo(cat: GoalCategory) {
-  return GOAL_CATEGORIES.find((c) => c.value === cat) ?? GOAL_CATEGORIES[GOAL_CATEGORIES.length - 1];
+  return (
+    GOAL_CATEGORIES.find((c) => c.value === cat) ?? GOAL_CATEGORIES[GOAL_CATEGORIES.length - 1]
+  );
 }
 
 const MILESTONES = [25, 50, 75, 100];
@@ -34,8 +41,8 @@ async function fetchGoalsWithContributions(): Promise<FinancialGoal[]> {
   if (contribsRes.error) throw contribsRes.error;
   if (linkedRes.error) throw linkedRes.error;
 
-  const contribs = (contribsRes.data ?? []);
-  const linked = (linkedRes.data ?? []);
+  const contribs = contribsRes.data ?? [];
+  const linked = linkedRes.data ?? [];
 
   return (goalsRes.data ?? []).map((row) => {
     const goal = toCamelCase<FinancialGoal>(row as Record<string, unknown>);
@@ -49,21 +56,29 @@ async function fetchGoalsWithContributions(): Promise<FinancialGoal[]> {
   });
 }
 
+const QUERY_KEY = ['financial_goals'];
+
 export function useFinancialGoals() {
   const queryClient = useQueryClient();
-  const queryKey = ['financial_goals'];
 
   const { data: goals = [] } = useQuery({
-    queryKey,
+    queryKey: QUERY_KEY,
     queryFn: fetchGoalsWithContributions,
   });
 
   const addGoal = useCallback(
-    async (goal: Omit<FinancialGoal, 'id' | 'createdAt' | 'currentAmount' | 'celebratedMilestones' | 'linkedTransactionIds'>) => {
+    async (
+      goal: Omit<
+        FinancialGoal,
+        'id' | 'createdAt' | 'currentAmount' | 'celebratedMilestones' | 'linkedTransactionIds'
+      >,
+    ) => {
       logger.info('[Goals] Creating', goal.name);
       analytics.track('goal_created', { category: goal.category, target: goal.targetAmount });
 
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       const { data, error } = await supabase
         .from('financial_goals')
         .insert({
@@ -82,7 +97,7 @@ export function useFinancialGoals() {
         .single();
 
       if (error) throw error;
-      queryClient.invalidateQueries({ queryKey });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEY });
       return toCamelCase<FinancialGoal>(data as Record<string, unknown>);
     },
     [queryClient],
@@ -105,7 +120,9 @@ export function useFinancialGoals() {
 
       const newCelebrated = [...celebrated, ...freshMilestones];
 
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       const [updateRes, contribRes] = await Promise.all([
         supabase
           .from('financial_goals')
@@ -123,14 +140,19 @@ export function useFinancialGoals() {
       if (updateRes.error) throw updateRes.error;
       if (contribRes.error) throw contribRes.error;
 
-      queryClient.invalidateQueries({ queryKey });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEY });
       return { newMilestones: freshMilestones };
     },
     [goals, queryClient],
   );
 
   const linkTransaction = useCallback(
-    async (goalId: string, transactionId: string, amount: number, label?: string): Promise<{ newMilestones: number[] }> => {
+    async (
+      goalId: string,
+      transactionId: string,
+      amount: number,
+      label?: string,
+    ): Promise<{ newMilestones: number[] }> => {
       const goal = goals.find((g) => g.id === goalId);
       if (!goal) return { newMilestones: [] };
 
@@ -145,7 +167,9 @@ export function useFinancialGoals() {
 
       logger.info('[Goals] Link transaction', { goalId, transactionId, amount });
 
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       const [updateRes, contribRes, linkRes] = await Promise.all([
         supabase
           .from('financial_goals')
@@ -171,7 +195,7 @@ export function useFinancialGoals() {
       if (contribRes.error) throw contribRes.error;
       if (linkRes.error) throw linkRes.error;
 
-      queryClient.invalidateQueries({ queryKey });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEY });
       return { newMilestones: freshMilestones };
     },
     [goals, queryClient],
@@ -183,7 +207,7 @@ export function useFinancialGoals() {
       analytics.track('goal_deleted');
       const { error } = await supabase.from('financial_goals').delete().eq('id', id);
       if (error) throw error;
-      queryClient.invalidateQueries({ queryKey });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEY });
     },
     [queryClient],
   );
