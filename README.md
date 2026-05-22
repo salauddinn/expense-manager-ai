@@ -45,6 +45,4 @@ bun run dev
 | `bun run test` | Run tests |
 | `bun run lint` | Lint with ESLint |
 
-## License
-
-Private project.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
