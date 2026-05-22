@@ -51,4 +51,12 @@ bun run dev
 | `bun run test` | Run tests |
 | `bun run lint` | Lint with ESLint |
 
+## Support
+
+If you find FinTrack useful and want to support its ongoing development, you can buy me a coffee!
+
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-Support-orange?style=flat-square&logo=buy-me-a-coffee)](https://buymeacoffee.com/salauddin.n)
+
+## License
+
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
