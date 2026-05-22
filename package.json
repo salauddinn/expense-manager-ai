@@ -1,7 +1,24 @@
 {
   "name": "fintrack",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "Mobile-first personal finance tracker with a smart AI chat interface.",
+  "author": "salauddinn",
+  "license": "MIT",
+  "homepage": "https://fin-track-ai.vercel.app/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/salauddinn/expense-manager-ai.git"
+  },
+  "keywords": [
+    "personal-finance",
+    "expense-tracker",
+    "ai",
+    "supabase",
+    "react",
+    "vite",
+    "pwa"
+  ],
   "type": "module",
   "scripts": {
     "dev": "vite",
