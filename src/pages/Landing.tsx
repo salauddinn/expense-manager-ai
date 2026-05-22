@@ -356,7 +356,7 @@ export default function Landing() {
         </div>
         <div className="mx-auto max-w-6xl mt-4 pt-4 border-t border-border/20">
           <p className="text-xs text-muted-foreground text-center">
-            Built with ❤️ · 100% client-side · Your data never leaves your device
+            Built with ❤️ by <a href="https://github.com/salauddinn" target="_blank" rel="noopener noreferrer" className="hover:text-foreground underline underline-offset-2 transition-colors font-medium">salauddinn</a> · 100% client-side · Your data never leaves your device
           </p>
         </div>
       </footer>
