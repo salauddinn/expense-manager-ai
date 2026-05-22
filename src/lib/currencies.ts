@@ -18,5 +18,6 @@ export function getCurrencySymbol(code: string): string {
 
 export function formatCurrency(amount: number, currency: string): string {
   const symbol = getCurrencySymbol(currency);
-  return `${symbol}${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const locale = currency === 'INR' ? 'en-IN' : 'en-US';
+  return `${symbol}${amount.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
