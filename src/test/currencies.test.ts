@@ -37,7 +37,8 @@ describe('currencies', () => {
     it('formats large numbers with commas', () => {
       const result = formatCurrency(1000000, 'INR');
       expect(result).toContain('₹');
-      expect(result).toMatch(/1[,.]000[,.]000\.00/);
+      // Accept either Western (1,000,000.00) or Indian lakh (10,00,000.00) grouping
+      expect(result).toMatch(/(1[,.]000[,.]000|10[,.]00[,.]000)\.00/);
     });
   });
 
