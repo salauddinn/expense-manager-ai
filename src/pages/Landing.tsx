@@ -6,7 +6,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import {
   MessageSquare, PieChart, Target, Shield, Smartphone, Zap,
-  ArrowRight, Sparkles, TrendingUp, CreditCard, Wallet, BarChart3,
+  ArrowRight, Sparkles, CreditCard, Wallet, BarChart3,
   ChevronRight, Star,
 } from 'lucide-react';
 

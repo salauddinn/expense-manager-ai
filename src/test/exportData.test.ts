@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, MockInstance } from 'vitest';
 import { exportTransactionsCSV } from '@/lib/exportData';
 import { Transaction } from '@/types/finance';
 
@@ -29,9 +29,9 @@ function captureCSV(): { getCsv: () => string } {
 }
 
 describe('exportData', () => {
-  let createObjectURLSpy: ReturnType<typeof vi.spyOn>;
-  let revokeObjectURLSpy: ReturnType<typeof vi.spyOn>;
-  let clickSpy: ReturnType<typeof vi.spyOn>;
+  let createObjectURLSpy: MockInstance<(obj: Blob | MediaSource) => string>;
+  let revokeObjectURLSpy: MockInstance<(url: string) => void>;
+  let clickSpy: MockInstance<() => void>;
   let createdLink: HTMLAnchorElement;
 
   beforeEach(() => {

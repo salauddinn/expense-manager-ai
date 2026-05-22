@@ -28,3 +28,6 @@ supabase/.temp/
 .env.*.local
 .env.development
 .env.production
+
+# Personal deployment notes (not for public repo)
+DEPLOY.md

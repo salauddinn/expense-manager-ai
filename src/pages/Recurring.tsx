@@ -14,7 +14,7 @@ import { useTransactions } from '@/hooks/useTransactions';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, getCategoryInfo } from '@/lib/categories';
 import { formatCurrency, CURRENCIES, DEFAULT_CURRENCY } from '@/lib/currencies';
 import { RecurringFrequency, CategoryType, TransactionType } from '@/types/finance';
-import { Plus, Trash2, RefreshCw, Play, TriangleAlert as AlertTriangle } from 'lucide-react';
+import { Plus, Trash2, RefreshCw, Play } from 'lucide-react';
 import { toast } from 'sonner';
 import { format, isPast, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';

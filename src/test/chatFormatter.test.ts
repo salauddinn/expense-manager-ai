@@ -82,7 +82,7 @@ describe('chatFormatter — buildIntentResponse', () => {
     it('formats credit card without outstanding', () => {
       const intent: ParsedIntent = {
         intent: 'credit_card',
-        data: { name: 'HDFC Card', limit: 200000, outstanding: 0, currency: 'INR' },
+        data: { name: 'HDFC Card', limit: 200000, outstanding: 0, dueDate: '2025-06-15', currency: 'INR' },
       };
       const result = buildIntentResponse(intent, emptyFinancialData);
       expect(result.content).toContain('HDFC Card');
@@ -93,7 +93,7 @@ describe('chatFormatter — buildIntentResponse', () => {
     it('includes outstanding when non-zero', () => {
       const intent: ParsedIntent = {
         intent: 'credit_card',
-        data: { name: 'HDFC Card', limit: 200000, outstanding: 5000, currency: 'INR' },
+        data: { name: 'HDFC Card', limit: 200000, outstanding: 5000, dueDate: '2025-06-15', currency: 'INR' },
       };
       const result = buildIntentResponse(intent, emptyFinancialData);
       expect(result.content).toContain('outstanding');
@@ -152,7 +152,7 @@ describe('chatFormatter — buildIntentResponse', () => {
     it('returns an answer with no parsedIntent', () => {
       const intent: ParsedIntent = {
         intent: 'query',
-        data: { queryType: 'balance' },
+        data: { queryType: 'balance', period: 'this_month' },
       };
       const result = buildIntentResponse(intent, emptyFinancialData);
       expect(result.content.length).toBeGreaterThan(0);
@@ -162,7 +162,7 @@ describe('chatFormatter — buildIntentResponse', () => {
 
   describe('unknown intent', () => {
     it('returns HELP_TEXT with no parsedIntent', () => {
-      const intent: ParsedIntent = { intent: 'unknown', data: {} };
+      const intent: ParsedIntent = { intent: 'unknown', data: null };
       const result = buildIntentResponse(intent, emptyFinancialData);
       expect(result.content).toMatch(/couldn't understand|try/i);
       expect(result.parsedIntent).toBeUndefined();

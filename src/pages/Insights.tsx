@@ -13,7 +13,7 @@ import { CHART_TOOLTIP_STYLE } from '@/lib/shared';
 import { CategoryType } from '@/types/finance';
 import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip,
-  BarChart, Bar, XAxis, YAxis, LineChart, Line, CartesianGrid, Legend,
+  BarChart, Bar, XAxis, YAxis, LineChart, Line,
 } from 'recharts';
 import {
   startOfMonth, endOfMonth, subMonths, isWithinInterval, format, getDaysInMonth, getDate,

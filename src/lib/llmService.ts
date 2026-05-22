@@ -5,7 +5,7 @@
 
 import { LLMProvider } from '@/hooks/useLLMSettings';
 import { CategoryType, TransactionType } from '@/types/finance';
-import type { ParsedIntent } from '@/lib/chatParser';
+import type { ParsedIntent, ParsedQuery } from '@/lib/chatParser';
 import { logger } from '@/lib/logger';
 import { supabase } from '@/lib/supabase';
 import { DEFAULT_CURRENCY, DEFAULT_LOAN_INTEREST_RATE, DEFAULT_LOAN_TENURE_MONTHS } from '@/lib/constants';
@@ -275,7 +275,7 @@ async function callGemini(
   const parts: GeminiPart[] = data.candidates?.[0]?.content?.parts ?? [];
   const fnCall = parts.find((p) => p.functionCall);
 
-  if (!fnCall) {
+  if (!fnCall || !fnCall.functionCall) {
     logger.warn('[LLM] Gemini returned no function call');
     const textPart = parts.find((p) => p.text);
     return {
@@ -290,7 +290,7 @@ async function callGemini(
   return {
     intent: fnCall.functionCall.name,
     data: args,
-    message: args.message ?? 'Parsed successfully.',
+    message: typeof args.message === 'string' ? args.message : 'Parsed successfully.',
   };
 }
 
@@ -358,7 +358,7 @@ function buildTransactionIntent(data: Record<string, unknown>): ParsedIntent {
       category: (data.category as CategoryType) ?? 'other',
       description: (data.description as string) ?? '',
       date: new Date().toISOString(),
-      ...(data.cashback && { cashback: data.cashback as number }),
+      ...(typeof data.cashback === 'number' ? { cashback: data.cashback } : {}),
     },
   };
 }
@@ -426,12 +426,15 @@ function buildBudgetIntent(data: Record<string, unknown>): ParsedIntent {
 }
 
 function buildQueryIntent(data: Record<string, unknown>): ParsedIntent {
+  const queryType = (data.queryType as ParsedQuery['queryType']) ?? 'summary';
+  const period = (data.period as ParsedQuery['period']) ?? 'this_month';
+  const category = data.category as CategoryType | undefined;
   return {
     intent: 'query',
     data: {
-      queryType: (data.queryType as string) ?? 'summary',
-      category: data.category as string | undefined,
-      period: (data.period as string) ?? 'this_month',
+      queryType,
+      category,
+      period,
     },
   };
 }

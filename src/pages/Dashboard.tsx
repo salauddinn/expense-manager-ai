@@ -19,7 +19,7 @@ import { useDataMigration } from '@/hooks/useDataMigration';
 import { formatCurrency, DEFAULT_CURRENCY } from '@/lib/currencies';
 import { sumBy, CHART_TOOLTIP_STYLE } from '@/lib/shared';
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line,
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from 'recharts';
 import {
   format, subMonths, startOfMonth, endOfMonth, isWithinInterval,
@@ -87,7 +87,7 @@ export default function Dashboard() {
 
   const chartData = useMemo(() => getMonthlyChartData(transactions), [transactions]);
 
-  const { thisMonthIncome, thisMonthExpenses, lastMonthExpenses, savingsRate, spendingChange } = useMemo(() => {
+  const { thisMonthIncome, thisMonthExpenses, savingsRate, spendingChange } = useMemo(() => {
     const now = new Date();
     const thisStart = startOfMonth(now);
     const thisEnd = endOfMonth(now);
