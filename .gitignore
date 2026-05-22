@@ -23,6 +23,7 @@ dist-ssr
 *.sln
 *.sw?
 supabase/.temp/
+supabase/.branches/
 .env
 .env.local
 .env.*.local
